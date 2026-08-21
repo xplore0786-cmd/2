@@ -1,0 +1,6 @@
+{
+  "name": "Image Size Reducer",
+  "description": "Free online image size reducer and compressor. Reduce JPG, PNG, and WebP file sizes in-browser with zero uploads for maximum privacy.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
