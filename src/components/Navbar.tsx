@@ -13,6 +13,7 @@ import {
 import { PageRoute } from '../types';
 import { useI18n, TranslationKey } from '../lib/i18n';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { AuthButton } from './AuthButton';
 
 interface NavbarProps {
   currentRoute: PageRoute;
@@ -113,6 +114,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           )}
 
+          {/* Google Sign-In / User Profile Button */}
+          <AuthButton />
+
           {/* Language Switcher */}
           <LanguageSwitcher />
 
@@ -174,6 +178,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="flex items-center gap-1">
               <ShieldCheck className="w-4 h-4 text-emerald-500" /> {t('privateBadge')}
             </span>
+            <AuthButton />
           </div>
         </div>
       )}
