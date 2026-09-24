@@ -44,6 +44,7 @@ export interface ImageItem {
 
 export type PageRoute = 
   | 'home' 
+  | 'pricing'
   | 'image-size-reducer' 
   | 'jpg-compressor' 
   | 'png-compressor' 

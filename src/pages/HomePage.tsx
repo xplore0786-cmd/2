@@ -9,7 +9,8 @@ import {
   CheckCircle2, 
   ArrowRight,
   Layers,
-  FileCheck
+  FileCheck,
+  Crown
 } from 'lucide-react';
 import { Dropzone } from '../components/Dropzone';
 import { GlobalControls } from '../components/GlobalControls';
@@ -181,6 +182,77 @@ export const HomePage: React.FC<HomePageProps> = ({
 
       {/* Format Comparison Matrix */}
       <FormatGuide />
+
+      {/* Subscription Model Showcase Banner */}
+      <section className="py-8">
+        <div className="max-w-5xl mx-auto rounded-3xl bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 text-white p-7 sm:p-12 shadow-2xl relative overflow-hidden border border-indigo-800/40">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="relative z-10 max-w-3xl space-y-5">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30 text-xs font-bold">
+              <Crown className="w-3.5 h-3.5 text-amber-400" />
+              <span>Pro Subscription Plans</span>
+            </div>
+            
+            <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-white">
+              Need Unlimited Image Resizing?
+            </h2>
+            
+            <p className="text-sm text-slate-300 leading-relaxed max-w-2xl">
+              Free signed-in users can resize up to <strong>10 images</strong>. Upgrade to Pro to remove all limits, enable high-capacity batch processing, and enjoy instant downloads.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-2">
+              <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/10 text-center">
+                <span className="text-xs text-indigo-200 font-semibold block">1 Month</span>
+                <div className="my-1">
+                  <span className="text-2xl font-black text-white">$10</span>
+                  <span className="text-xs text-slate-300 font-bold ml-1">USD</span>
+                </div>
+                <span className="text-[11px] text-slate-400">Billed monthly</span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/10 text-center relative">
+                <span className="absolute -top-2.5 right-3 px-2 py-0.5 rounded-full bg-emerald-500 text-[10px] font-extrabold text-white">
+                  Save 17%
+                </span>
+                <span className="text-xs text-indigo-200 font-semibold block">3 Months</span>
+                <div className="my-1">
+                  <span className="text-2xl font-black text-white">$25</span>
+                  <span className="text-xs text-slate-300 font-bold ml-1">USD</span>
+                </div>
+                <span className="text-[11px] text-slate-400">$8.33 / month</span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-gradient-to-b from-indigo-500/30 to-purple-500/30 border border-indigo-400/50 text-center relative ring-2 ring-indigo-400/60 shadow-lg">
+                <span className="absolute -top-2.5 right-3 px-2 py-0.5 rounded-full bg-amber-400 text-[10px] font-black text-slate-950 uppercase tracking-wide">
+                  Best Value
+                </span>
+                <span className="text-xs text-amber-300 font-bold block">1 Year</span>
+                <div className="my-1">
+                  <span className="text-2xl font-black text-white">$75</span>
+                  <span className="text-xs text-slate-300 font-bold ml-1">USD</span>
+                </div>
+                <span className="text-[11px] text-slate-300">Save 37.5% • $6.25/mo</span>
+              </div>
+            </div>
+
+            <div className="pt-3 flex flex-wrap items-center gap-4">
+              <button
+                type="button"
+                onClick={() => onNavigate('pricing')}
+                className="px-6 py-3 rounded-2xl bg-white hover:bg-slate-100 text-indigo-950 font-extrabold text-xs sm:text-sm shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <span>View Plans & Upgrade to Pro</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+              <span className="text-xs text-slate-400">
+                Cancel anytime • 30-day money back guarantee
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* FAQ Section */}
       <SeoFaqSection />

@@ -14,10 +14,14 @@ import {
   Copy,
   Check,
   Globe,
-  AlertCircle
+  AlertCircle,
+  UserCheck,
+  Crown,
+  Zap
 } from 'lucide-react';
 import { useI18n } from '../lib/i18n';
 import { useAuth } from '../context/AuthContext';
+import { useSubscription, FREE_TIER_LIMIT } from '../context/SubscriptionContext';
 
 interface DropzoneProps {
   onFilesSelected: (files: File[]) => void;
@@ -36,7 +40,13 @@ export const Dropzone: React.FC<DropzoneProps> = ({
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { t } = useI18n();
-  const { user, error, unauthorizedDomain, signInWithGoogle, clearError } = useAuth();
+  const { user, error, unauthorizedDomain, signInWithGoogle, signInAsGuest, clearError } = useAuth();
+  const { 
+    usageCount, 
+    remainingQuota, 
+    isUnlimited, 
+    openUpgradeModal 
+  } = useSubscription();
 
   const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
   const firebaseSettingsUrl = "https://console.firebase.google.com/project/freeimageresize-4e46f/authentication/settings";
@@ -52,11 +62,17 @@ export const Dropzone: React.FC<DropzoneProps> = ({
   // If user signs in while pendingFiles are waiting, automatically upload and compress
   useEffect(() => {
     if (user && pendingFiles.length > 0) {
+      if (!isUnlimited && usageCount >= FREE_TIER_LIMIT) {
+        setShowAuthModal(false);
+        openUpgradeModal('You have reached your 10 free images limit. Upgrade to Pro for unlimited image resizing!');
+        setPendingFiles([]);
+        return;
+      }
       onFilesSelected(pendingFiles);
       setPendingFiles([]);
       setShowAuthModal(false);
     }
-  }, [user, pendingFiles, onFilesSelected]);
+  }, [user, pendingFiles, onFilesSelected, isUnlimited, usageCount, openUpgradeModal]);
 
   // Initiate Google Sign-In and deferred upload
   const handleTriggerSignIn = async (filesToProcess?: File[]) => {
@@ -81,6 +97,23 @@ export const Dropzone: React.FC<DropzoneProps> = ({
     }
   };
 
+  // Guest sign-in fallback for instant upload testing
+  const handleGuestSignIn = (filesToProcess?: File[]) => {
+    const guestUser = signInAsGuest();
+    if (guestUser) {
+      setShowAuthModal(false);
+      const files = filesToProcess && filesToProcess.length > 0 ? filesToProcess : pendingFiles;
+      if (files.length > 0) {
+        onFilesSelected(files);
+        setPendingFiles([]);
+      } else {
+        setTimeout(() => {
+          fileInputRef.current?.click();
+        }, 150);
+      }
+    }
+  };
+
   const handleFiles = useCallback((files: FileList | File[]) => {
     const validFiles: File[] = [];
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/bmp', 'image/gif'];
@@ -94,22 +127,41 @@ export const Dropzone: React.FC<DropzoneProps> = ({
 
     if (validFiles.length === 0) return;
 
-    // Check if user is authenticated
+    // Check if user is authenticated; if not, show the modal to sign in
     if (!user) {
       setPendingFiles(validFiles);
       setShowAuthModal(true);
-      handleTriggerSignIn(validFiles);
       return;
     }
 
+    // Check usage quota for free signed-in user (limit is 10 images resize)
+    if (!isUnlimited) {
+      if (usageCount >= FREE_TIER_LIMIT) {
+        openUpgradeModal('Usage limit reached: Free signed-in users can resize up to 10 images. Upgrade to Pro ($10/mo, $25/3mo, $75/yr) for unlimited image resizing!');
+        return;
+      }
+      if (usageCount + validFiles.length > FREE_TIER_LIMIT) {
+        const allowedCount = Math.max(0, FREE_TIER_LIMIT - usageCount);
+        const filesToProcess = validFiles.slice(0, allowedCount);
+        openUpgradeModal(`You have ${allowedCount} free resize${allowedCount > 1 ? 's' : ''} left on your Free Plan. We're processing ${filesToProcess.length} image${filesToProcess.length > 1 ? 's' : ''}. Upgrade to Pro for unlimited batch resizing!`);
+        if (filesToProcess.length > 0) {
+          onFilesSelected(filesToProcess);
+        }
+        return;
+      }
+    }
+
     onFilesSelected(validFiles);
-  }, [user, onFilesSelected]);
+  }, [user, onFilesSelected, isUnlimited, usageCount, openUpgradeModal]);
 
   // Click on dropzone area / upload button
   const handleDropzoneClick = () => {
     if (!user) {
       setShowAuthModal(true);
-      handleTriggerSignIn();
+      return;
+    }
+    if (!isUnlimited && usageCount >= FREE_TIER_LIMIT) {
+      openUpgradeModal('You have used all 10 free image resizes on your Free Plan. Upgrade to Pro ($10/mo, $25/3mo, $75/yr) for unlimited image resizing!');
       return;
     }
     fileInputRef.current?.click();
@@ -165,177 +217,251 @@ export const Dropzone: React.FC<DropzoneProps> = ({
     return () => window.removeEventListener('paste', handlePaste);
   }, [handleFiles]);
 
-  // Create High-Res Sample Images on the Fly for Demo
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleFiles(e.target.files);
+      // Reset input value so same files can be re-selected if needed
+      e.target.value = '';
+    }
+  };
+
+  // Sample photo generator helper for instant testing
   const generateSampleImage = (type: 'photo' | 'graphic') => {
     const canvas = document.createElement('canvas');
-    const width = type === 'photo' ? 1920 : 1200;
-    const height = type === 'photo' ? 1080 : 800;
-    canvas.width = width;
-    canvas.height = height;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     if (type === 'photo') {
-      const grad = ctx.createLinearGradient(0, 0, width, height);
-      grad.addColorStop(0, '#0f172a');
-      grad.addColorStop(0.3, '#1e1b4b');
-      grad.addColorStop(0.6, '#4338ca');
-      grad.addColorStop(1, '#f97316');
+      canvas.width = 1920;
+      canvas.height = 1080;
+      // Draw scenic gradient with rich noise texture
+      const grad = ctx.createLinearGradient(0, 0, 1920, 1080);
+      grad.addColorStop(0, '#1e3a8a');
+      grad.addColorStop(0.35, '#3b82f6');
+      grad.addColorStop(0.7, '#f59e0b');
+      grad.addColorStop(1, '#ef4444');
       ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, width, height);
+      ctx.fillRect(0, 0, 1920, 1080);
 
-      ctx.fillStyle = '#fdba74';
+      // Add sun disc
       ctx.beginPath();
-      ctx.arc(width * 0.75, height * 0.45, 120, 0, Math.PI * 2);
+      ctx.arc(1400, 300, 120, 0, Math.PI * 2);
+      ctx.fillStyle = '#fef08a';
       ctx.fill();
 
-      ctx.fillStyle = '#090d16';
+      // Add mountain silhouettes
       ctx.beginPath();
-      ctx.moveTo(0, height);
-      ctx.lineTo(width * 0.25, height * 0.52);
-      ctx.lineTo(width * 0.5, height * 0.85);
-      ctx.lineTo(width * 0.75, height * 0.42);
-      ctx.lineTo(width, height);
+      ctx.moveTo(0, 1080);
+      ctx.lineTo(400, 600);
+      ctx.lineTo(800, 800);
+      ctx.lineTo(1200, 500);
+      ctx.lineTo(1600, 750);
+      ctx.lineTo(1920, 550);
+      ctx.lineTo(1920, 1080);
       ctx.closePath();
+      ctx.fillStyle = '#0f172a';
       ctx.fill();
 
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.beginPath();
-      ctx.arc(width * 0.25, height * 0.25, 90, 0, Math.PI * 2);
-      ctx.arc(width * 0.35, height * 0.23, 110, 0, Math.PI * 2);
-      ctx.arc(width * 0.45, height * 0.27, 85, 0, Math.PI * 2);
-      ctx.fill();
+      // Text label
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 48px sans-serif';
+      ctx.fillText('Sample High-Resolution Photo (1920×1080)', 80, 140);
+      ctx.font = '32px sans-serif';
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillText('Ready for lossy JPG size reduction tests', 80, 200);
 
       canvas.toBlob((blob) => {
         if (blob) {
-          const file = new File([blob], 'sample-mountain-scenery.jpg', { type: 'image/jpeg' });
-          handleFiles([file]);
+          const sampleFile = new File([blob], 'sample-mountain-sunset.jpg', { type: 'image/jpeg' });
+          handleFiles([sampleFile]);
         }
-      }, 'image/jpeg', 0.98);
+      }, 'image/jpeg', 0.95);
     } else {
-      ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = '#6366f1';
+      canvas.width = 1200;
+      canvas.height = 1200;
+      // Draw transparent background with crisp vector-like geometry
+      ctx.clearRect(0, 0, 1200, 1200);
+
+      // Soft circular gradient plate
+      const grad = ctx.createRadialGradient(600, 600, 50, 600, 600, 500);
+      grad.addColorStop(0, '#6366f1');
+      grad.addColorStop(0.8, '#4f46e5');
+      grad.addColorStop(1, '#3730a3');
+      ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.roundRect(150, 100, width - 300, height - 200, 32);
+      ctx.arc(600, 600, 450, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#a855f7';
+      // Inner white star/sparkle icon
+      ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.arc(width * 0.5, height * 0.5, 180, 0, Math.PI * 2);
+      ctx.arc(600, 600, 160, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 44px sans-serif';
+      ctx.font = 'bold 54px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Sample Vector Illustration PNG', width * 0.5, height * 0.48);
-      ctx.font = '24px sans-serif';
-      ctx.fillText('High Quality RGBA Graphic', width * 0.5, height * 0.56);
+      ctx.fillText('Vector Graphic (PNG)', 600, 900);
+      ctx.font = '32px sans-serif';
+      ctx.fillText('Alpha Transparency & Sharp Edges', 600, 960);
 
       canvas.toBlob((blob) => {
         if (blob) {
-          const file = new File([blob], 'sample-vector-badge.png', { type: 'image/png' });
-          handleFiles([file]);
+          const sampleFile = new File([blob], 'sample-vector-badge.png', { type: 'image/png' });
+          handleFiles([sampleFile]);
         }
       }, 'image/png');
     }
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full max-w-4xl mx-auto">
+      {/* Hidden File Input */}
       <input
         ref={fileInputRef}
         type="file"
         multiple
-        accept="image/jpeg,image/jpg,image/png,image/webp,image/bmp,image/gif"
+        accept="image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif"
+        onChange={handleInputChange}
         className="hidden"
         id="file-upload-input"
-        onChange={(e) => {
-          if (e.target.files && e.target.files.length > 0) {
-            handleFiles(e.target.files);
-            e.target.value = '';
-          }
-        }}
       />
 
+      {/* Main Interactive Dropzone Box */}
       <div
-        id="dropzone-container"
+        role="button"
+        tabIndex={0}
+        aria-label="Upload images dropzone"
+        onClick={handleDropzoneClick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleDropzoneClick();
+          }
+        }}
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={handleDropzoneClick}
-        className={`relative border-2 border-dashed rounded-3xl p-8 sm:p-12 text-center cursor-pointer transition-all duration-300 group select-none ${
+        className={`group relative flex flex-col items-center justify-center p-8 sm:p-12 rounded-3xl border-2 border-dashed transition-all duration-200 cursor-pointer overflow-hidden ${
           isDragOver
-            ? 'border-indigo-500 bg-indigo-50/80 dark:bg-indigo-950/40 scale-[1.01] shadow-2xl shadow-indigo-500/10'
-            : 'border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-900/70 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-slate-50/90 dark:hover:bg-slate-800/60 shadow-sm'
+            ? 'border-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/40 scale-[1.01] shadow-xl shadow-indigo-500/10'
+            : 'border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-900/70 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 shadow-sm'
         }`}
       >
-        {/* Animated Background Glow on Hover */}
-        <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-indigo-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
+        {/* Subtle Decorative Background Mesh */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-indigo-50/20 via-transparent to-cyan-50/20 pointer-events-none dark:from-indigo-950/10 dark:to-cyan-950/10" />
 
-        <div className="relative flex flex-col items-center justify-center space-y-4 max-w-xl mx-auto">
-          {/* Main Upload Icon with Lock/Key indicator if not signed in */}
-          <div className="relative">
-            <div className="w-20 h-20 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform duration-300 shadow-inner">
-              <UploadCloud className="w-10 h-10" />
+        {/* User Quota & Plan Status Banner */}
+        {user ? (
+          isUnlimited ? (
+            <div className="relative mb-5 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-emerald-500/10 border border-amber-300 dark:border-amber-700/60 text-xs font-bold text-amber-800 dark:text-amber-300">
+              <Crown className="w-3.5 h-3.5 text-amber-500" />
+              <span>PRO Active: Unlimited Image Resizing</span>
             </div>
-            <div className="absolute -bottom-1 -right-1 rtl:-right-auto rtl:-left-1 w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-md">
-              <Plus className="w-4 h-4 stroke-[3]" />
+          ) : usageCount >= FREE_TIER_LIMIT ? (
+            <div className="relative mb-5 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 text-center max-w-sm">
+              <div className="flex items-center justify-center gap-1.5 font-bold text-amber-900 dark:text-amber-200 text-xs">
+                <AlertCircle className="w-4 h-4 text-amber-600" />
+                <span>10 Image Resizes Limit Reached</span>
+              </div>
+              <p className="text-[11px] text-amber-800 dark:text-amber-300 mt-1">
+                You've used all 10 free resizes. Upgrade to Pro for unlimited resizing!
+              </p>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openUpgradeModal();
+                }}
+                className="mt-2.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs"
+              >
+                Upgrade to Pro ($10/mo, $25/3mo, $75/yr)
+              </button>
             </div>
-          </div>
-
-          {/* Heading and subtext */}
-          <div className="space-y-1.5">
-            <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              {t('dropzoneTitle')}
-            </h3>
-            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
-              {t('dropzoneSubtitle')}
-            </p>
-          </div>
-
-          {/* Auth status hint */}
-          {!user && (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-[11px] font-medium text-amber-700 dark:text-amber-300">
-              <Lock className="w-3 h-3 text-amber-500" />
-              <span>Click to sign in with Google &amp; start compressing</span>
+          ) : (
+            <div className="relative mb-5 inline-flex flex-wrap items-center justify-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 shadow-2xs">
+              <Zap className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Signed-in Limit: <strong>{usageCount}/{FREE_TIER_LIMIT}</strong> images resized ({remainingQuota} remaining)</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openUpgradeModal();
+                }}
+                className="text-indigo-600 dark:text-indigo-400 font-extrabold hover:underline cursor-pointer"
+              >
+                Upgrade
+              </button>
             </div>
-          )}
-
-          {/* Formats and Batch Support */}
-          <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-            <span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-              JPG / JPEG
-            </span>
-            <span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-              PNG (Alpha)
-            </span>
-            <span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-              WebP
-            </span>
-            <span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
-              {t('batchLimitHint')}
-            </span>
+          )
+        ) : (
+          <div className="relative mb-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
+            <Sparkles className="w-3 h-3 text-indigo-500" />
+            <span>Sign in with Google to get 10 free image resizes</span>
           </div>
+        )}
 
-          {/* Privacy badge */}
-          <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-900/60">
-            <ShieldCheck className="w-4 h-4 shrink-0" />
-            <span>{t('zeroUploads')}</span>
+        {/* Central Icon Illustration */}
+        <div className="relative mb-5">
+          <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-3xl flex items-center justify-center transition-all duration-300 ${
+            isDragOver 
+              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 scale-110' 
+              : 'bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 group-hover:scale-105 group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-lg group-hover:shadow-indigo-500/25'
+          }`}>
+            <UploadCloud className="w-10 h-10 sm:w-12 sm:h-12 transition-transform duration-300 group-hover:-translate-y-1" />
           </div>
+          <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md animate-pulse">
+            <Plus className="w-3.5 h-3.5" />
+          </span>
         </div>
+
+        {/* Action Title & Instructions */}
+        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-slate-100 text-center tracking-tight mb-2">
+          {t('dropzoneTitle')}
+        </h2>
+
+        <p className="text-sm text-slate-500 dark:text-slate-400 text-center max-w-lg mb-6 leading-relaxed">
+          {t('dropzoneSubtitle')}
+        </p>
+
+        {/* Big Prominent Upload Button */}
+        <div className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-sm shadow-md shadow-indigo-500/20 transition-all cursor-pointer">
+          <ImageIcon className="w-4 h-4" />
+          <span>Select Images from Device</span>
+        </div>
+
+        {/* Supported Formats & Privacy Assurance */}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-400 dark:text-slate-500">
+          <span className="flex items-center gap-1.5 font-medium">
+            <ShieldCheck className="w-4 h-4 text-emerald-500" />
+            <span>Zero server upload • 100% In-Browser</span>
+          </span>
+          <span className="hidden sm:inline">•</span>
+          <span>JPG, PNG, WebP, GIF, BMP, AVIF</span>
+        </div>
+
+        {/* Drag Overlay visual indicator */}
+        {isDragOver && (
+          <div className="absolute inset-0 bg-indigo-600/10 backdrop-blur-[2px] flex items-center justify-center pointer-events-none">
+            <div className="bg-indigo-600 text-white font-bold px-6 py-3 rounded-2xl shadow-xl flex items-center gap-2 text-base animate-bounce">
+              <UploadCloud className="w-5 h-5" />
+              <span>Drop images to start compressing!</span>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Quick Test Samples */}
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-        <span className="font-medium">{t('trySamplePhotos')}</span>
+      {/* Quick Test Demo Files Banner */}
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs text-slate-500 dark:text-slate-400">
+        <span className="font-medium text-slate-400 dark:text-slate-500">{t('trySamplePhotos')}</span>
         <button
           type="button"
           onClick={() => generateSampleImage('photo')}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer"
           id="btn-sample-photo"
         >
-          <ImageIcon className="w-3.5 h-3.5 text-indigo-500" />
+          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
           <span>{t('sampleLandscape')}</span>
         </button>
         <button
@@ -349,7 +475,7 @@ export const Dropzone: React.FC<DropzoneProps> = ({
         </button>
       </div>
 
-      {/* Google Sign-in Prompt Modal when clicking Upload or Dropping files */}
+      {/* Sign-in Prompt Modal shown when user clicks Upload or Drops files */}
       {showAuthModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="relative w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-6 sm:p-7 text-center">
@@ -357,6 +483,7 @@ export const Dropzone: React.FC<DropzoneProps> = ({
               onClick={() => {
                 setShowAuthModal(false);
                 setPendingFiles([]);
+                clearError();
               }}
               className="absolute top-4 right-4 rtl:right-auto rtl:left-4 p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
               aria-label="Close modal"
@@ -428,22 +555,33 @@ export const Dropzone: React.FC<DropzoneProps> = ({
                   <button
                     type="button"
                     onClick={handleCopyDomain}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 font-sans font-semibold text-[11px] hover:bg-amber-200 transition-colors shrink-0"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 font-sans font-semibold text-[11px] hover:bg-amber-200 transition-colors shrink-0 cursor-pointer"
                   >
                     {copiedDomain ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
                     <span>{copiedDomain ? 'Copied!' : 'Copy'}</span>
                   </button>
                 </div>
 
-                <a
-                  href={firebaseSettingsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-xs transition-colors"
-                >
-                  <span>Open Firebase Authorized Domains</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <a
+                    href={firebaseSettingsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-xs transition-colors"
+                  >
+                    <span>Open Firebase Settings</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={() => handleGuestSignIn()}
+                    className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-slate-800 text-amber-900 dark:text-amber-200 font-semibold text-xs transition-colors cursor-pointer"
+                  >
+                    <UserCheck className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Upload as Guest</span>
+                  </button>
+                </div>
               </div>
             ) : error ? (
               <div className="mb-4 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-left text-xs text-rose-700 dark:text-rose-300">
@@ -485,8 +623,20 @@ export const Dropzone: React.FC<DropzoneProps> = ({
               <span>{isSigningIn ? t('connecting') : t('continueWithGoogle')}</span>
             </button>
 
+            {/* Quick Guest Upload Alternative */}
+            <div className="mt-3.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => handleGuestSignIn()}
+                className="text-xs text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>Continue as Guest to upload immediately</span>
+              </button>
+            </div>
+
             {/* Privacy note */}
-            <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
+            <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
               <span>Your images remain 100% private in your browser.</span>
             </div>

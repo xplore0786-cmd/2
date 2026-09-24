@@ -10,6 +10,9 @@ import { WebpCompressorPage } from './pages/WebpCompressorPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { TermsPage } from './pages/TermsPage';
 import { ContactPage } from './pages/ContactPage';
+import { PricingPage } from './pages/PricingPage';
+import { SubscriptionModal } from './components/SubscriptionModal';
+import { useSubscription, FREE_TIER_LIMIT } from './context/SubscriptionContext';
 import { ImageItem, ImageSettings, PageRoute } from './types';
 import { 
   compressSingleImage, 
@@ -50,6 +53,15 @@ export default function App() {
   const [zipProgress, setZipProgress] = useState<number | null>(null);
   const [modalItem, setModalItem] = useState<ImageItem | null>(null);
 
+  // Subscription & Usage Quota hook
+  const { 
+    usageCount, 
+    remainingQuota, 
+    isUnlimited, 
+    recordResizedImages, 
+    openUpgradeModal 
+  } = useSubscription();
+
   // Sync theme with HTML document class
   useEffect(() => {
     if (isDark) {
@@ -69,6 +81,7 @@ export default function App() {
       const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
       const validRoutes: Record<string, PageRoute> = {
         '': 'home',
+        'pricing': 'pricing',
         'image-size-reducer': 'image-size-reducer',
         'jpg-compressor': 'jpg-compressor',
         'png-compressor': 'png-compressor',
@@ -91,6 +104,7 @@ export default function App() {
   useEffect(() => {
     const titles: Record<PageRoute, string> = {
       'home': 'Free Image Size Reducer Online – Compress Images',
+      'pricing': 'Pricing & Pro Subscription Plans – 1 Month ($10), 3 Months ($25), 1 Year ($75)',
       'image-size-reducer': 'Image Size Reducer – Target File Size Optimizer (100KB, 500KB)',
       'jpg-compressor': 'Free JPG Compressor Online – Reduce JPEG Size Without Losing Quality',
       'png-compressor': 'Free PNG Compressor Online – Lossless Transparent Image Optimizer',
@@ -190,6 +204,8 @@ export default function App() {
       );
     }
 
+    // Record resized images toward free limit (10 images limit)
+    recordResizedImages(newItems.length);
     setIsCompressing(false);
   };
 
@@ -197,6 +213,11 @@ export default function App() {
   const handleRecompressItem = async (id: string) => {
     const itemToUpdate = items.find((i) => i.id === id);
     if (!itemToUpdate) return;
+
+    if (!isUnlimited && usageCount >= FREE_TIER_LIMIT) {
+      openUpgradeModal('You have reached the 10-image resize limit on your Free Plan. Upgrade to Pro ($10/mo, $25/3mo, $75/yr) for unlimited resizing!');
+      return;
+    }
 
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status: 'compressing' } : item))
@@ -207,6 +228,7 @@ export default function App() {
       status: 'compressing',
     });
 
+    recordResizedImages(1);
     setItems((prev) => prev.map((item) => (item.id === id ? updated : item)));
   };
 
@@ -214,6 +236,11 @@ export default function App() {
   const handleUpdateItemSettings = async (id: string, newSettings: ImageSettings) => {
     const itemToUpdate = items.find((i) => i.id === id);
     if (!itemToUpdate) return;
+
+    if (!isUnlimited && usageCount >= FREE_TIER_LIMIT) {
+      openUpgradeModal('You have reached the 10-image resize limit on your Free Plan. Upgrade to Pro ($10/mo, $25/3mo, $75/yr) for unlimited resizing!');
+      return;
+    }
 
     const itemWithNewSettings: ImageItem = {
       ...itemToUpdate,
@@ -226,12 +253,19 @@ export default function App() {
     );
 
     const updated = await processImage(itemWithNewSettings);
+    recordResizedImages(1);
     setItems((prev) => prev.map((item) => (item.id === id ? updated : item)));
   };
 
   // Apply Global Settings To All Images and Re-compress
   const handleApplySettingsToAll = async () => {
     if (items.length === 0) return;
+
+    if (!isUnlimited && usageCount + items.length > FREE_TIER_LIMIT) {
+      openUpgradeModal(`You have ${remainingQuota} free resize${remainingQuota > 1 ? 's' : ''} remaining. To re-compress all ${items.length} images, upgrade to Pro ($10/mo, $25/3mo, $75/yr)!`);
+      return;
+    }
+
     setIsCompressing(true);
 
     const updatedQueue = items.map((item) => ({
@@ -253,6 +287,7 @@ export default function App() {
       );
     }
 
+    recordResizedImages(items.length);
     setIsCompressing(false);
   };
 
@@ -414,6 +449,10 @@ export default function App() {
         {currentRoute === 'contact' && (
           <ContactPage onNavigate={handleNavigate} />
         )}
+
+        {currentRoute === 'pricing' && (
+          <PricingPage onNavigate={handleNavigate} />
+        )}
       </main>
 
       {/* Footer */}
@@ -426,6 +465,9 @@ export default function App() {
           onClose={() => setModalItem(null)}
         />
       )}
+
+      {/* Pro Subscription & Pricing Plans Modal */}
+      <SubscriptionModal />
 
     </div>
   );

@@ -8,12 +8,16 @@ import {
   Sparkles,
   Image as ImageIcon,
   Menu,
-  X
+  X,
+  Crown,
+  Zap
 } from 'lucide-react';
 import { PageRoute } from '../types';
 import { useI18n, TranslationKey } from '../lib/i18n';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { AuthButton } from './AuthButton';
+import { useSubscription, FREE_TIER_LIMIT } from '../context/SubscriptionContext';
+import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
   currentRoute: PageRoute;
@@ -32,8 +36,17 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const { t } = useI18n();
+  const { user } = useAuth();
+  const { 
+    usageCount, 
+    isUnlimited, 
+    remainingQuota, 
+    subscription, 
+    openUpgradeModal 
+  } = useSubscription();
 
   const navLinks: { key: TranslationKey; route: PageRoute; badge?: string }[] = [
+    { key: 'pricing', route: 'pricing', badge: '$10+' },
     { key: 'reducer', route: 'image-size-reducer' },
     { key: 'jpg', route: 'jpg-compressor' },
     { key: 'png', route: 'png-compressor' },
@@ -97,7 +110,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               {t(link.key)}
               {link.badge && (
-                <span className="ml-1 text-[9px] px-1 py-0.2 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 font-semibold">
+                <span className="ml-1 text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-extrabold">
                   {link.badge}
                 </span>
               )}
@@ -112,6 +125,47 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Sparkles className="w-3.5 h-3.5 text-indigo-500 animate-pulse" />
               <span>{queueCount} {t('activeQueue')}</span>
             </div>
+          )}
+
+          {/* Usage Pill / Pro Badge */}
+          {user && (
+            isUnlimited ? (
+              <button
+                type="button"
+                onClick={() => openUpgradeModal()}
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-amber-500/10 border border-amber-300 dark:border-amber-700/60 text-xs font-bold text-amber-700 dark:text-amber-300 hover:scale-102 transition-transform cursor-pointer"
+                title="Active Pro Subscription: Unlimited Resizes"
+              >
+                <Crown className="w-3.5 h-3.5 text-amber-500" />
+                <span>PRO Active</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => openUpgradeModal()}
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                title={`Signed-in Free limit: 10 images resize. Used: ${usageCount}/${FREE_TIER_LIMIT}. Click to Upgrade to Pro!`}
+              >
+                <Zap className="w-3.5 h-3.5 text-indigo-500" />
+                <span>{usageCount}/{FREE_TIER_LIMIT} used</span>
+                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/80 px-1 py-0.5 rounded">
+                  Upgrade
+                </span>
+              </button>
+            )
+          )}
+
+          {/* Upgrade / Pricing Modal Trigger */}
+          {!isUnlimited && (
+            <button
+              type="button"
+              onClick={() => openUpgradeModal()}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs shadow-xs active:scale-95 transition-all cursor-pointer"
+              title="View Subscription Plans ($10/mo, $25/3mo, $75/yr)"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>Pro</span>
+            </button>
           )}
 
           {/* Google Sign-In / User Profile Button */}
@@ -165,20 +219,37 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onNavigate(link.route);
                 setIsMobileMenuOpen(false);
               }}
-              className={`w-full text-left rtl:text-right px-3 py-2 rounded-lg text-sm font-medium ${
+              className={`w-full text-left rtl:text-right px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-between ${
                 currentRoute === link.route
                   ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50'
                   : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
-              {t(link.key)}
+              <span>{t(link.key)}</span>
+              {link.badge && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-extrabold">
+                  {link.badge}
+                </span>
+              )}
             </button>
           ))}
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
-            <span className="flex items-center gap-1">
-              <ShieldCheck className="w-4 h-4 text-emerald-500" /> {t('privateBadge')}
-            </span>
-            <AuthButton />
+          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+            <button
+              onClick={() => {
+                openUpgradeModal();
+                setIsMobileMenuOpen(false);
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-indigo-600 text-white font-bold text-xs shadow-xs"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>{isUnlimited ? 'Manage Pro Subscription' : 'Upgrade to Pro ($10/mo, $25/3mo, $75/yr)'}</span>
+            </button>
+            <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+              <span className="flex items-center gap-1">
+                <ShieldCheck className="w-4 h-4 text-emerald-500" /> {t('privateBadge')}
+              </span>
+              <AuthButton />
+            </div>
           </div>
         </div>
       )}
