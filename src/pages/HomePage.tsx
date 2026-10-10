@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { 
   Zap, 
   ShieldCheck, 
@@ -10,15 +10,24 @@ import {
   ArrowRight,
   Layers,
   FileCheck,
-  Crown
+  Calendar,
+  Briefcase,
+  Globe,
+  Maximize2,
+  Share2,
+  HelpCircle,
+  Clock
 } from 'lucide-react';
 import { Dropzone } from '../components/Dropzone';
 import { GlobalControls } from '../components/GlobalControls';
 import { ImageList } from '../components/ImageList';
 import { SeoFaqSection } from '../components/SeoFaqSection';
 import { FormatGuide } from '../components/FormatGuide';
+import { AdSlot } from '../components/AdSlot';
+import { CommunityShare } from '../components/CommunityShare';
 import { ImageItem, ImageSettings, PageRoute } from '../types';
 import { useI18n } from '../lib/i18n';
+import { PRESETS, getPresetsByCategory } from '../presets';
 
 interface HomePageProps {
   items: ImageItem[];
@@ -33,7 +42,7 @@ interface HomePageProps {
   onCompressAll: () => void;
   onDownloadAllZip: () => void;
   onClearAll: () => void;
-  onNavigate: (route: PageRoute) => void;
+  onNavigate: (route: string) => void;
   isCompressing: boolean;
   zipProgress?: number | null;
 }
@@ -57,6 +66,33 @@ export const HomePage: React.FC<HomePageProps> = ({
 }) => {
   const { t } = useI18n();
   const completedCount = items.filter((i) => i.status === 'done').length;
+
+  // Presets sorted by lastUpdated descending for "Recently updated"
+  const recentlyUpdated = useMemo(() => {
+    return [...PRESETS]
+      .sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime())
+      .slice(0, 6);
+  }, []);
+
+  // Popular tools curated list
+  const popularTools = useMemo(() => {
+    const popularSlugs = [
+      'ssc-photo-signature-resize',
+      'indian-passport-photo-resize',
+      'resize-signature-to-20kb',
+      'resize-image-to-50kb',
+      'us-visa-photo-resize',
+      'resize-image-to-100kb',
+      'youtube-thumbnail-resizer-1280x720',
+      'pan-card-photo-signature-resize',
+    ];
+    return PRESETS.filter(p => popularSlugs.includes(p.slug));
+  }, []);
+
+  const govtPresets = useMemo(() => getPresetsByCategory('govt-jobs'), []);
+  const passportPresets = useMemo(() => getPresetsByCategory('passport-id'), []);
+  const kbPresets = useMemo(() => getPresetsByCategory('resize-to-kb'), []);
+  const dimPresets = useMemo(() => getPresetsByCategory('dimensions'), []);
 
   return (
     <div className="space-y-12 sm:space-y-16">
@@ -85,12 +121,12 @@ export const HomePage: React.FC<HomePageProps> = ({
             <Zap className="w-4 h-4 text-amber-500 shrink-0" /> {t('instantProcessing')}
           </span>
           <span className="flex items-center gap-1.5">
-            <Target className="w-4 h-4 text-indigo-500 shrink-0" /> {t('targetFileSize')} (e.g. 100 KB)
+            <Target className="w-4 h-4 text-indigo-500 shrink-0" /> Exact 20KB & 50KB Presets
           </span>
         </div>
       </section>
 
-      {/* Main Interactive Compressor Workspace */}
+      {/* Main Interactive Compressor Workspace at the TOP */}
       <section className="space-y-8 max-w-5xl mx-auto">
         
         {/* Dropzone */}
@@ -132,127 +168,239 @@ export const HomePage: React.FC<HomePageProps> = ({
 
       </section>
 
-      {/* Value Propositions / Why Choose freeimageresize */}
-      <section className="py-12 border-t border-slate-200 dark:border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              {t('feature1Title')} & {t('feature3Title')}
+      {/* Community Share */}
+      <div className="max-w-5xl mx-auto">
+        <CommunityShare />
+      </div>
+
+      {/* Popular Tools Grid */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-4">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">
+              <Zap className="w-3.5 h-3.5" />
+              <span>Most Used</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              Popular Resizing Tools
             </h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Why thousands of developers, designers, photographers, and students rely on our image compressor daily.
-            </p>
           </div>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+            One-click presets with dimensions and target KB auto-configured.
+          </p>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-3 shadow-xs">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
-                <ShieldCheck className="w-6 h-6" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {popularTools.map((tool) => (
+            <div
+              key={tool.id}
+              onClick={() => onNavigate(tool.slug)}
+              className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-0.5 rounded-full">
+                    {tool.categoryLabel}
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    {tool.items[0]?.minKB ? `${tool.items[0].minKB}-${tool.items[0].maxKB}KB` : `${tool.items[0]?.maxKB || 'Auto'}KB`}
+                  </span>
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors mb-1">
+                  {tool.title}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                  {tool.metaDescription}
+                </p>
               </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('feature1Title')}</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                {t('feature1Desc')}
-              </p>
-            </div>
 
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-3 shadow-xs">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
-                <Target className="w-6 h-6" />
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                <span>Open Tool</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
               </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('feature2Title')}</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                {t('feature2Desc')}
-              </p>
             </div>
+          ))}
+        </div>
+      </section>
 
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-3 shadow-xs">
-              <div className="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
-                <Download className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('feature3Title')}</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                {t('feature3Desc')}
-              </p>
+      {/* Govt Jobs Grid */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-4">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">
+              <Briefcase className="w-3.5 h-3.5" />
+              <span>Government Recruitment</span>
             </div>
-
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              Govt Exam Photo & Signature Resizers
+            </h2>
           </div>
+          <button
+            type="button"
+            onClick={() => onNavigate('govt-jobs')}
+            className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+          >
+            <span>View All Govt Exam Tools</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {govtPresets.slice(0, 6).map((preset) => (
+            <div
+              key={preset.id}
+              onClick={() => onNavigate(preset.slug)}
+              className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-indigo-300 dark:hover:border-indigo-700 transition-all cursor-pointer group flex flex-col justify-between"
+            >
+              <div>
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded">
+                  {preset.items.length} Files Supported
+                </span>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors mt-2 mb-1">
+                  {preset.title}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                  {preset.metaDescription}
+                </p>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                <span>Resize Documents</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Passport & ID Grid */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-4">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">
+              <Globe className="w-3.5 h-3.5" />
+              <span>Identity & Travel Documents</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              Passport Photo, Visa & ID Tools
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate('passport-photo')}
+            className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+          >
+            <span>View All Passport & ID Tools</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {passportPresets.slice(0, 8).map((preset) => (
+            <div
+              key={preset.id}
+              onClick={() => onNavigate(preset.slug)}
+              className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-indigo-300 dark:hover:border-indigo-700 transition-all cursor-pointer group flex flex-col justify-between"
+            >
+              <div>
+                <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/60 px-2 py-0.5 rounded">
+                  {preset.items[0]?.dimensionCm || 'Standard'}
+                </span>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors mt-2 mb-1">
+                  {preset.title.split('Online')[0].trim()}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                  {preset.metaDescription}
+                </p>
+              </div>
+
+              <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                <span>Crop & Resize</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Resize to KB & Dimensions Grid */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-4">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span>Exact Kilobytes & Pixels</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              Resize by KB Size & Resolution
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate('resize-by-size')}
+            className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+          >
+            <span>View All Size Tools</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          {kbPresets.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => onNavigate(preset.slug)}
+              className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center hover:border-indigo-500 hover:shadow-sm transition-all group"
+            >
+              <span className="block text-base font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                {preset.items[0]?.maxKB ? `${preset.items[0].maxKB} KB` : 'KB'}
+              </span>
+              <span className="block text-[11px] text-slate-400 mt-0.5">
+                Target Reducer
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Recently Updated Section (sorted by lastUpdated) */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-indigo-500" />
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
+              Recently Updated Tools
+            </h2>
+          </div>
+          <span className="text-xs text-slate-400">
+            Synced with recent exam cycles
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {recentlyUpdated.map((preset) => (
+            <div
+              key={preset.id}
+              onClick={() => onNavigate(preset.slug)}
+              className="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between cursor-pointer hover:bg-white dark:hover:bg-slate-900 transition-all group"
+            >
+              <div className="truncate mr-3">
+                <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 truncate">
+                  {preset.title}
+                </h4>
+                <span className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                  <Calendar className="w-3 h-3" /> Updated {preset.lastUpdated}
+                </span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform shrink-0" />
+            </div>
+          ))}
         </div>
       </section>
 
       {/* Format Comparison Matrix */}
       <FormatGuide />
-
-      {/* Subscription Model Showcase Banner */}
-      <section className="py-8">
-        <div className="max-w-5xl mx-auto rounded-3xl bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 text-white p-7 sm:p-12 shadow-2xl relative overflow-hidden border border-indigo-800/40">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-          
-          <div className="relative z-10 max-w-3xl space-y-5">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30 text-xs font-bold">
-              <Crown className="w-3.5 h-3.5 text-amber-400" />
-              <span>Pro Subscription Plans</span>
-            </div>
-            
-            <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-white">
-              Need Unlimited Image Resizing?
-            </h2>
-            
-            <p className="text-sm text-slate-300 leading-relaxed max-w-2xl">
-              Free signed-in users can resize up to <strong>10 images</strong>. Upgrade to Pro to remove all limits, enable high-capacity batch processing, and enjoy instant downloads.
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-2">
-              <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/10 text-center">
-                <span className="text-xs text-indigo-200 font-semibold block">1 Month</span>
-                <div className="my-1">
-                  <span className="text-2xl font-black text-white">$10</span>
-                  <span className="text-xs text-slate-300 font-bold ml-1">USD</span>
-                </div>
-                <span className="text-[11px] text-slate-400">Billed monthly</span>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/10 text-center relative">
-                <span className="absolute -top-2.5 right-3 px-2 py-0.5 rounded-full bg-emerald-500 text-[10px] font-extrabold text-white">
-                  Save 17%
-                </span>
-                <span className="text-xs text-indigo-200 font-semibold block">3 Months</span>
-                <div className="my-1">
-                  <span className="text-2xl font-black text-white">$25</span>
-                  <span className="text-xs text-slate-300 font-bold ml-1">USD</span>
-                </div>
-                <span className="text-[11px] text-slate-400">$8.33 / month</span>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-gradient-to-b from-indigo-500/30 to-purple-500/30 border border-indigo-400/50 text-center relative ring-2 ring-indigo-400/60 shadow-lg">
-                <span className="absolute -top-2.5 right-3 px-2 py-0.5 rounded-full bg-amber-400 text-[10px] font-black text-slate-950 uppercase tracking-wide">
-                  Best Value
-                </span>
-                <span className="text-xs text-amber-300 font-bold block">1 Year</span>
-                <div className="my-1">
-                  <span className="text-2xl font-black text-white">$75</span>
-                  <span className="text-xs text-slate-300 font-bold ml-1">USD</span>
-                </div>
-                <span className="text-[11px] text-slate-300">Save 37.5% • $6.25/mo</span>
-              </div>
-            </div>
-
-            <div className="pt-3 flex flex-wrap items-center gap-4">
-              <button
-                type="button"
-                onClick={() => onNavigate('pricing')}
-                className="px-6 py-3 rounded-2xl bg-white hover:bg-slate-100 text-indigo-950 font-extrabold text-xs sm:text-sm shadow-lg transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <span>View Plans & Upgrade to Pro</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-              <span className="text-xs text-slate-400">
-                Cancel anytime • 30-day money back guarantee
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* FAQ Section */}
       <SeoFaqSection />

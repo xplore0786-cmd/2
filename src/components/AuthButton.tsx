@@ -20,8 +20,13 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useSubscription, FREE_TIER_LIMIT } from '../context/SubscriptionContext';
 import { useI18n } from '../lib/i18n';
+import { ENABLE_ACCOUNTS } from '../config';
 
 export const AuthButton: React.FC = () => {
+  if (!ENABLE_ACCOUNTS) {
+    return null;
+  }
+
   const { 
     user, 
     loading, 

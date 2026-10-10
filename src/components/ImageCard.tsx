@@ -139,6 +139,27 @@ export const ImageCard: React.FC<ImageCardProps> = ({
                     -{savings.percentSaved}%
                   </span>
                 )}
+
+                {/* Preset Compliance Badge (Green or Red) */}
+                {item.meetsTargetRequirement !== undefined && (
+                  item.meetsTargetRequirement ? (
+                    <span 
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                      title={item.validationMessage || 'Meets preset size criteria'}
+                    >
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                      <span>Compliant</span>
+                    </span>
+                  ) : (
+                    <span 
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30"
+                      title={item.validationMessage || 'Exceeds or below preset target'}
+                    >
+                      <AlertCircle className="w-3 h-3 text-rose-600 dark:text-rose-400" />
+                      <span>{item.validationMessage || 'Check Limits'}</span>
+                    </span>
+                  )
+                )}
               </>
             ) : item.status === 'compressing' ? (
               <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1">

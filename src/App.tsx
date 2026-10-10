@@ -1,19 +1,34 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { BeforeAfterModal } from './components/BeforeAfterModal';
 import { HomePage } from './pages/HomePage';
-import { ImageSizeReducerPage } from './pages/ImageSizeReducerPage';
-import { JpgCompressorPage } from './pages/JpgCompressorPage';
-import { PngCompressorPage } from './pages/PngCompressorPage';
-import { WebpCompressorPage } from './pages/WebpCompressorPage';
+import { PresetPage } from './pages/PresetPage';
+import { GovtJobsHubPage } from './pages/GovtJobsHubPage';
+import { PassportPhotoHubPage } from './pages/PassportPhotoHubPage';
+import { ResizeBySizeHubPage } from './pages/ResizeBySizeHubPage';
+import { SocialMediaHubPage } from './pages/SocialMediaHubPage';
+import { BlogHubPage } from './pages/BlogHubPage';
+import { BlogPostPage } from './pages/BlogPostPage';
+import { AboutPage } from './pages/AboutPage';
+import { DisclaimerPage } from './pages/DisclaimerPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { TermsPage } from './pages/TermsPage';
 import { ContactPage } from './pages/ContactPage';
 import { PricingPage } from './pages/PricingPage';
+import { SupportPage } from './pages/SupportPage';
+import { NotFoundPage } from './pages/NotFoundPage';
+import { ImageSizeReducerPage } from './pages/ImageSizeReducerPage';
+import { JpgCompressorPage } from './pages/JpgCompressorPage';
+import { PngCompressorPage } from './pages/PngCompressorPage';
+import { WebpCompressorPage } from './pages/WebpCompressorPage';
 import { SubscriptionModal } from './components/SubscriptionModal';
-import { useSubscription, FREE_TIER_LIMIT } from './context/SubscriptionContext';
-import { ImageItem, ImageSettings, PageRoute } from './types';
+import { ImageItem, ImageSettings } from './types';
+import { updatePageMeta } from './lib/seo';
+import { SITE_NAME, SITE_URL } from './config';
+import { getPresetBySlug, PRESETS } from './presets';
+import { getBlogPostBySlug } from './blogData';
+import { useI18n } from './lib/i18n';
 import { 
   compressSingleImage, 
   downloadAllAsZip, 
@@ -33,6 +48,8 @@ const DEFAULT_SETTINGS: ImageSettings = {
 };
 
 export default function App() {
+  const { t, language } = useI18n();
+
   // Theme state
   const [isDark, setIsDark] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
@@ -43,302 +60,466 @@ export default function App() {
     return false;
   });
 
-  // Routing state
-  const [currentRoute, setCurrentRoute] = useState<PageRoute>('home');
+  // Routing state based on URL path
+  const [currentRoute, setCurrentRoute] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
+      return path || 'home';
+    }
+    return 'home';
+  });
 
-  // Images state
+  // Images state for main compressor
   const [items, setItems] = useState<ImageItem[]>([]);
   const [globalSettings, setGlobalSettings] = useState<ImageSettings>(DEFAULT_SETTINGS);
   const [isCompressing, setIsCompressing] = useState<boolean>(false);
   const [zipProgress, setZipProgress] = useState<number | null>(null);
   const [modalItem, setModalItem] = useState<ImageItem | null>(null);
 
-  // Subscription & Usage Quota hook
-  const { 
-    usageCount, 
-    remainingQuota, 
-    isUnlimited, 
-    recordResizedImages, 
-    openUpgradeModal 
-  } = useSubscription();
-
   // Sync theme with HTML document class
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add('dark');
       document.documentElement.style.colorScheme = 'dark';
-      localStorage.setItem('isr_theme', 'dark');
+      try { localStorage.setItem('isr_theme', 'dark'); } catch {}
     } else {
       document.documentElement.classList.remove('dark');
       document.documentElement.style.colorScheme = 'light';
-      localStorage.setItem('isr_theme', 'light');
+      try { localStorage.setItem('isr_theme', 'light'); } catch {}
     }
   }, [isDark]);
 
-  // Sync URL Path with Route State on load and history navigation
+  // Handle URL navigation and popstate
   useEffect(() => {
-    const syncRouteFromPath = () => {
+    const handlePopState = () => {
       const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
-      const validRoutes: Record<string, PageRoute> = {
-        '': 'home',
-        'pricing': 'pricing',
-        'image-size-reducer': 'image-size-reducer',
-        'jpg-compressor': 'jpg-compressor',
-        'png-compressor': 'png-compressor',
-        'webp-compressor': 'webp-compressor',
-        'privacy-policy': 'privacy-policy',
-        'terms': 'terms',
-        'contact': 'contact',
-      };
-      if (validRoutes[path]) {
-        setCurrentRoute(validRoutes[path]);
-      }
+      setCurrentRoute(path || 'home');
     };
-
-    syncRouteFromPath();
-    window.addEventListener('popstate', syncRouteFromPath);
-    return () => window.removeEventListener('popstate', syncRouteFromPath);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Update Document Title & Meta for SEO on route change
-  useEffect(() => {
-    const titles: Record<PageRoute, string> = {
-      'home': 'Free Image Size Reducer Online – Compress Images',
-      'pricing': 'Pricing & Pro Subscription Plans – 1 Month ($10), 3 Months ($25), 1 Year ($75)',
-      'image-size-reducer': 'Image Size Reducer – Target File Size Optimizer (100KB, 500KB)',
-      'jpg-compressor': 'Free JPG Compressor Online – Reduce JPEG Size Without Losing Quality',
-      'png-compressor': 'Free PNG Compressor Online – Lossless Transparent Image Optimizer',
-      'webp-compressor': 'WebP Compressor & Converter – Reduce Web Image Size Up To 35%',
-      'privacy-policy': 'Privacy Policy – 100% In-Browser Client-Side Processing',
-      'terms': 'Terms and Conditions – Image Size Reducer',
-      'contact': 'Contact Us – Image Size Reducer Support & Feedback',
-    };
-
-    if (titles[currentRoute]) {
-      document.title = titles[currentRoute];
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentRoute]);
-
-  const handleNavigate = (route: PageRoute) => {
-    setCurrentRoute(route);
-    const newPath = route === 'home' ? '/' : `/${route}`;
+  const handleNavigate = useCallback((route: string) => {
+    const cleanRoute = route.replace(/^\/+|\/+$/g, '');
+    const newPath = cleanRoute ? `/${cleanRoute}` : '/';
+    
     if (window.location.pathname !== newPath) {
-      window.history.pushState({}, '', newPath);
+      window.history.pushState(null, '', newPath);
     }
-  };
-
-  // Compression Worker Runner
-  const processImage = useCallback(async (item: ImageItem): Promise<ImageItem> => {
-    try {
-      const result = await compressSingleImage(item);
-      return {
-        ...item,
-        status: 'done',
-        compressedBlob: result.blob,
-        compressedUrl: result.url,
-        compressedSize: result.size,
-        compressedWidth: result.width,
-        compressedHeight: result.height,
-        compressedType: result.mimeType,
-        compressionRatio: result.ratio,
-        errorMessage: undefined,
-      };
-    } catch (err: any) {
-      return {
-        ...item,
-        status: 'error',
-        errorMessage: err?.message || 'Compression error',
-      };
-    }
+    setCurrentRoute(cleanRoute || 'home');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // Handle Adding New Files
+  // Update SEO Head Tags dynamically based on route
+  useEffect(() => {
+    const clean = currentRoute === 'home' ? '' : currentRoute;
+
+    // Check if route is a preset
+    const preset = getPresetBySlug(clean);
+    if (preset) {
+      updatePageMeta({
+        title: `${preset.metaTitle} – ${SITE_NAME}`,
+        description: preset.metaDescription,
+        path: preset.slug,
+        noindex: !preset.verified, // Exam & ID presets are verified:false -> noindex!
+        breadcrumbs: [
+          { name: 'Home', url: '/' },
+          { name: preset.categoryLabel, url: `/${preset.category === 'govt-jobs' ? 'govt-jobs' : preset.category === 'passport-id' ? 'passport-photo' : 'resize-by-size'}` },
+          { name: preset.title, url: `/${preset.slug}` }
+        ],
+        faqs: preset.faqs,
+      });
+      return;
+    }
+
+    // Check if route is a blog post
+    if (clean.startsWith('blog/')) {
+      const blogSlug = clean.replace('blog/', '');
+      const post = getBlogPostBySlug(blogSlug);
+      if (post) {
+        updatePageMeta({
+          title: `${post.metaTitle} – ${SITE_NAME}`,
+          description: post.metaDescription,
+          path: clean,
+          isArticle: true,
+          publishedDate: post.publishedDate,
+          breadcrumbs: [
+            { name: 'Home', url: '/' },
+            { name: 'Blog', url: '/blog' },
+            { name: post.title, url: `/blog/${post.slug}` }
+          ],
+        });
+        return;
+      }
+    }
+
+    // Static & Hub pages SEO
+    switch (clean) {
+      case '':
+      case 'home':
+        updatePageMeta({
+          title: `Free Image Size Reducer Online – Compress Photos to Exact KB & Dimensions`,
+          description: '100% free in-browser image compressor and photo resizer. Reduce JPG, PNG, and WebP to exact 20KB, 50KB, 100KB, or passport 35x45mm with zero server upload.',
+          path: '',
+        });
+        break;
+
+      case 'govt-jobs':
+        updatePageMeta({
+          title: `Govt Job Photo & Signature Resizers (SSC, UPSC, IBPS, Railways) – ${SITE_NAME}`,
+          description: 'Resize photographs (20KB - 50KB) and signatures (10KB - 20KB) for SSC, UPSC, Bank PO/Clerk, Railway RRB, and Police recruitment forms online.',
+          path: 'govt-jobs',
+          breadcrumbs: [
+            { name: 'Home', url: '/' },
+            { name: 'Govt Jobs', url: '/govt-jobs' }
+          ]
+        });
+        break;
+
+      case 'passport-photo':
+        updatePageMeta({
+          title: `Passport Photo & ID Card Resizers (Indian Passport 35x45mm, US Visa, PAN) – ${SITE_NAME}`,
+          description: 'Format passport and visa photos to official ICAO dimensions: 35x45 mm, 2x2 inch, 600x600 px, PAN card, and Aadhaar card. 100% free and in-browser.',
+          path: 'passport-photo',
+          breadcrumbs: [
+            { name: 'Home', url: '/' },
+            { name: 'Passport Photo', url: '/passport-photo' }
+          ]
+        });
+        break;
+
+      case 'resize-by-size':
+        updatePageMeta({
+          title: `Resize Image by KB Size & Dimensions (10KB, 20KB, 50KB, 100KB, 1080x1080) – ${SITE_NAME}`,
+          description: 'Compress images to exact kilobyte limits (10KB to 1MB) or resize to custom dimensions, percentages, and centimeters at 300 DPI.',
+          path: 'resize-by-size',
+          breadcrumbs: [
+            { name: 'Home', url: '/' },
+            { name: 'Resize to KB', url: '/resize-by-size' }
+          ]
+        });
+        break;
+
+      case 'social-media-sizes':
+        updatePageMeta({
+          title: `Social Media Image Resizer (Instagram, YouTube Thumbnail, WhatsApp DP) – ${SITE_NAME}`,
+          description: 'Resize images for Instagram posts (1080x1080) & stories (1080x1920), YouTube thumbnails (1280x720 under 2MB), WhatsApp DP, Facebook cover, and LinkedIn banners.',
+          path: 'social-media-sizes',
+          breadcrumbs: [
+            { name: 'Home', url: '/' },
+            { name: 'Social Media Sizes', url: '/social-media-sizes' }
+          ]
+        });
+        break;
+
+      case 'blog':
+        updatePageMeta({
+          title: `Image Resizing & Exam Upload Guides – ${SITE_NAME}`,
+          description: 'Step-by-step guides on resizing photographs and signatures for SSC, UPSC, Bank, and Passport applications without rejection.',
+          path: 'blog',
+          breadcrumbs: [
+            { name: 'Home', url: '/' },
+            { name: 'Blog', url: '/blog' }
+          ]
+        });
+        break;
+
+      case 'about':
+        updatePageMeta({
+          title: `About Us – ${SITE_NAME}`,
+          description: 'Learn about FreeImageResize: our mission to provide 100% free, private, client-side image compression for candidates and creators.',
+          path: 'about',
+          breadcrumbs: [
+            { name: 'Home', url: '/' },
+            { name: 'About', url: '/about' }
+          ]
+        });
+        break;
+
+      case 'disclaimer':
+        updatePageMeta({
+          title: `Official Disclaimer – ${SITE_NAME}`,
+          description: 'Not affiliated with any government body or exam authority. Always verify photo and signature requirements with official notifications.',
+          path: 'disclaimer',
+          breadcrumbs: [
+            { name: 'Home', url: '/' },
+            { name: 'Disclaimer', url: '/disclaimer' }
+          ]
+        });
+        break;
+
+      case 'privacy-policy':
+        updatePageMeta({
+          title: `Privacy Policy – ${SITE_NAME}`,
+          description: 'Zero server uploads. 100% client-side privacy architecture. Learn how all image compression executes in your local browser.',
+          path: 'privacy-policy',
+          breadcrumbs: [
+            { name: 'Home', url: '/' },
+            { name: 'Privacy Policy', url: '/privacy-policy' }
+          ]
+        });
+        break;
+
+      case 'terms':
+        updatePageMeta({
+          title: `Terms of Service – ${SITE_NAME}`,
+          description: 'Terms of service and usage guidelines for FreeImageResize web application.',
+          path: 'terms',
+          breadcrumbs: [
+            { name: 'Home', url: '/' },
+            { name: 'Terms of Service', url: '/terms' }
+          ]
+        });
+        break;
+
+      case 'contact':
+        updatePageMeta({
+          title: `Contact Us – ${SITE_NAME}`,
+          description: 'Get in touch with the FreeImageResize team for questions, feedback, or support.',
+          path: 'contact',
+          breadcrumbs: [
+            { name: 'Home', url: '/' },
+            { name: 'Contact', url: '/contact' }
+          ]
+        });
+        break;
+
+      case 'support':
+        updatePageMeta({
+          title: `Support FreeImageResize (UPI / Tip) – ${SITE_NAME}`,
+          description: 'Support our free, independent tool. Help keep image resizing unlimited and free for students and job applicants across India.',
+          path: 'support',
+          breadcrumbs: [
+            { name: 'Home', url: '/' },
+            { name: 'Support', url: '/support' }
+          ]
+        });
+        break;
+
+      case 'pricing':
+        updatePageMeta({
+          title: `Pricing Plans – ${SITE_NAME}`,
+          description: 'FreeImageResize is 100% free with unlimited image resizing. View optional plan details.',
+          path: 'pricing',
+          noindex: true,
+        });
+        break;
+
+      case 'image-size-reducer':
+      case 'jpg-compressor':
+      case 'png-compressor':
+      case 'webp-compressor':
+        updatePageMeta({
+          title: `${clean.replace(/-/g, ' ').toUpperCase()} Online – ${SITE_NAME}`,
+          description: `Fast, client-side in-browser ${clean.replace(/-/g, ' ')}. Unlimited free compression without uploading to any server.`,
+          path: clean,
+          breadcrumbs: [
+            { name: 'Home', url: '/' },
+            { name: clean.replace(/-/g, ' '), url: `/${clean}` }
+          ]
+        });
+        break;
+
+      default:
+        // 404 page: must have noindex!
+        updatePageMeta({
+          title: `404 Page Not Found – ${SITE_NAME}`,
+          description: 'The requested page or tool preset does not exist.',
+          path: clean,
+          noindex: true,
+        });
+        break;
+    }
+  }, [currentRoute, language]);
+
+  // Image processing handlers for main compressor on home
   const handleFilesSelected = async (newFiles: File[]) => {
+    if (newFiles.length === 0) return;
+    setIsCompressing(true);
+
     const newItems: ImageItem[] = [];
-
     for (const file of newFiles) {
-      const previewUrl = URL.createObjectURL(file);
-      let width = 0;
-      let height = 0;
-
+      let origW = 800;
+      let origH = 800;
       try {
         const dims = await getImageDimensions(file);
-        width = dims.width;
-        height = dims.height;
+        origW = dims.width;
+        origH = dims.height;
       } catch {
-        width = 800;
-        height = 600;
+        // fallback
       }
 
-      newItems.push({
+      const newItem: ImageItem = {
         id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         file,
         name: file.name,
         originalSize: file.size,
-        originalWidth: width,
-        originalHeight: height,
+        originalWidth: origW,
+        originalHeight: origH,
         originalType: file.type || 'image/jpeg',
-        previewUrl,
+        previewUrl: URL.createObjectURL(file),
         status: 'compressing',
         settings: { ...globalSettings },
-      });
+      };
+
+      try {
+        const result = await compressSingleImage(newItem);
+        newItem.compressedBlob = result.blob;
+        newItem.compressedUrl = result.url;
+        newItem.compressedSize = result.size;
+        newItem.compressedWidth = result.width;
+        newItem.compressedHeight = result.height;
+        newItem.compressedType = result.mimeType;
+        newItem.compressionRatio = result.ratio;
+        newItem.status = 'done';
+        newItem.meetsTargetRequirement = result.meetsRequirement;
+        newItem.validationMessage = result.validationMessage;
+      } catch (err: any) {
+        newItem.status = 'error';
+        newItem.errorMessage = err?.message || 'Compression failed';
+      }
+
+      newItems.push(newItem);
     }
 
-    setItems((prev) => [...prev, ...newItems]);
-    setIsCompressing(true);
-
-    // Process new items concurrently in batches of 3
-    const processedList: ImageItem[] = [];
-    for (let i = 0; i < newItems.length; i += 3) {
-      const chunk = newItems.slice(i, i + 3);
-      const results = await Promise.all(chunk.map((item) => processImage(item)));
-      processedList.push(...results);
-
-      // Incremental state update so UI shows progress immediately
-      setItems((prev) =>
-        prev.map((existing) => {
-          const matched = results.find((r) => r.id === existing.id);
-          return matched || existing;
-        })
-      );
-    }
-
-    // Record resized images toward free limit (10 images limit)
-    recordResizedImages(newItems.length);
+    setItems((prev) => [...newItems, ...prev]);
     setIsCompressing(false);
   };
 
-  // Recompress Single Item
-  const handleRecompressItem = async (id: string) => {
-    const itemToUpdate = items.find((i) => i.id === id);
-    if (!itemToUpdate) return;
-
-    if (!isUnlimited && usageCount >= FREE_TIER_LIMIT) {
-      openUpgradeModal('You have reached the 10-image resize limit on your Free Plan. Upgrade to Pro ($10/mo, $25/3mo, $75/yr) for unlimited resizing!');
-      return;
-    }
-
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status: 'compressing' } : item))
-    );
-
-    const updated = await processImage({
-      ...itemToUpdate,
-      status: 'compressing',
-    });
-
-    recordResizedImages(1);
-    setItems((prev) => prev.map((item) => (item.id === id ? updated : item)));
-  };
-
-  // Update Individual Item Settings
   const handleUpdateItemSettings = async (id: string, newSettings: ImageSettings) => {
-    const itemToUpdate = items.find((i) => i.id === id);
-    if (!itemToUpdate) return;
-
-    if (!isUnlimited && usageCount >= FREE_TIER_LIMIT) {
-      openUpgradeModal('You have reached the 10-image resize limit on your Free Plan. Upgrade to Pro ($10/mo, $25/3mo, $75/yr) for unlimited resizing!');
-      return;
-    }
-
-    const itemWithNewSettings: ImageItem = {
-      ...itemToUpdate,
-      settings: newSettings,
-      status: 'compressing',
-    };
-
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? itemWithNewSettings : item))
-    );
-
-    const updated = await processImage(itemWithNewSettings);
-    recordResizedImages(1);
-    setItems((prev) => prev.map((item) => (item.id === id ? updated : item)));
-  };
-
-  // Apply Global Settings To All Images and Re-compress
-  const handleApplySettingsToAll = async () => {
-    if (items.length === 0) return;
-
-    if (!isUnlimited && usageCount + items.length > FREE_TIER_LIMIT) {
-      openUpgradeModal(`You have ${remainingQuota} free resize${remainingQuota > 1 ? 's' : ''} remaining. To re-compress all ${items.length} images, upgrade to Pro ($10/mo, $25/3mo, $75/yr)!`);
-      return;
-    }
-
-    setIsCompressing(true);
-
-    const updatedQueue = items.map((item) => ({
-      ...item,
-      settings: { ...globalSettings },
-      status: 'compressing' as const,
-    }));
-
-    setItems(updatedQueue);
-
-    for (let i = 0; i < updatedQueue.length; i += 3) {
-      const chunk = updatedQueue.slice(i, i + 3);
-      const results = await Promise.all(chunk.map((item) => processImage(item)));
-      setItems((prev) =>
-        prev.map((existing) => {
-          const matched = results.find((r) => r.id === existing.id);
-          return matched || existing;
-        })
-      );
-    }
-
-    recordResizedImages(items.length);
-    setIsCompressing(false);
-  };
-
-  // Remove Single Image
-  const handleRemoveItem = (id: string) => {
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, settings: newSettings } : item)));
     const target = items.find((i) => i.id === id);
-    if (target) {
-      if (target.previewUrl) URL.revokeObjectURL(target.previewUrl);
-      if (target.compressedUrl) URL.revokeObjectURL(target.compressedUrl);
+    if (!target) return;
+
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, status: 'compressing' } : i)));
+    try {
+      const res = await compressSingleImage({ ...target, settings: newSettings });
+      setItems((prev) => prev.map((i) => (i.id === id ? {
+        ...i,
+        compressedBlob: res.blob,
+        compressedUrl: res.url,
+        compressedSize: res.size,
+        compressedWidth: res.width,
+        compressedHeight: res.height,
+        compressedType: res.mimeType,
+        compressionRatio: res.ratio,
+        status: 'done',
+        meetsTargetRequirement: res.meetsRequirement,
+        validationMessage: res.validationMessage,
+      } : i)));
+    } catch (err: any) {
+      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, status: 'error', errorMessage: err?.message } : i)));
     }
+  };
+
+  const handleRecompressItem = async (id: string) => {
+    const target = items.find((i) => i.id === id);
+    if (!target) return;
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, status: 'compressing' } : i)));
+    try {
+      const res = await compressSingleImage(target);
+      setItems((prev) => prev.map((i) => (i.id === id ? {
+        ...i,
+        compressedBlob: res.blob,
+        compressedUrl: res.url,
+        compressedSize: res.size,
+        compressedWidth: res.width,
+        compressedHeight: res.height,
+        compressedType: res.mimeType,
+        compressionRatio: res.ratio,
+        status: 'done',
+        meetsTargetRequirement: res.meetsRequirement,
+        validationMessage: res.validationMessage,
+      } : i)));
+    } catch (err: any) {
+      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, status: 'error', errorMessage: err?.message } : i)));
+    }
+  };
+
+  const handleRemoveItem = (id: string) => {
     setItems((prev) => prev.filter((i) => i.id !== id));
   };
 
-  // Clear All Images
+  const handleApplySettingsToAll = async () => {
+    if (items.length === 0) return;
+    setIsCompressing(true);
+    const updated = await Promise.all(
+      items.map(async (item) => {
+        const withNewSettings = { ...item, settings: { ...globalSettings } };
+        try {
+          const res = await compressSingleImage(withNewSettings);
+          return {
+            ...withNewSettings,
+            compressedBlob: res.blob,
+            compressedUrl: res.url,
+            compressedSize: res.size,
+            compressedWidth: res.width,
+            compressedHeight: res.height,
+            compressedType: res.mimeType,
+            compressionRatio: res.ratio,
+            status: 'done' as const,
+            meetsTargetRequirement: res.meetsRequirement,
+            validationMessage: res.validationMessage,
+          };
+        } catch (err: any) {
+          return {
+            ...withNewSettings,
+            status: 'error' as const,
+            errorMessage: err?.message,
+          };
+        }
+      })
+    );
+    setItems(updated);
+    setIsCompressing(false);
+  };
+
   const handleClearAll = () => {
-    items.forEach((item) => {
-      if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
-      if (item.compressedUrl) URL.revokeObjectURL(item.compressedUrl);
+    items.forEach((i) => {
+      if (i.previewUrl) URL.revokeObjectURL(i.previewUrl);
+      if (i.compressedUrl) URL.revokeObjectURL(i.compressedUrl);
     });
     setItems([]);
   };
 
-  // Download All as ZIP
   const handleDownloadAllZip = async () => {
-    try {
-      setZipProgress(0);
-      await downloadAllAsZip(items, 'compressed-images.zip', (percent) => {
-        setZipProgress(percent);
-      });
-      setTimeout(() => setZipProgress(null), 1200);
-    } catch (err: any) {
-      setZipProgress(null);
-      alert(err.message || 'Failed to create ZIP archive');
-    }
+    if (items.length === 0) return;
+    setZipProgress(0);
+    await downloadAllAsZip(items, setZipProgress);
+    setTimeout(() => setZipProgress(null), 1500);
   };
 
-  return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
-      
-      {/* Navigation Header */}
-      <Navbar
-        currentRoute={currentRoute}
-        onNavigate={handleNavigate}
-        isDark={isDark}
-        onToggleTheme={() => setIsDark(!isDark)}
-        queueCount={items.filter((i) => i.status === 'compressing').length}
-      />
+  // Route renderer
+  const renderCurrentPage = () => {
+    const clean = currentRoute === 'home' ? '' : currentRoute;
 
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
-        {currentRoute === 'home' && (
+    // 1. Preset pages (SSC, UPSC, Indian Passport, 20KB, etc.)
+    const preset = getPresetBySlug(clean);
+    if (preset) {
+      return (
+        <PresetPage 
+          preset={preset} 
+          onNavigate={handleNavigate} 
+          onOpenModal={(item) => setModalItem(item)} 
+        />
+      );
+    }
+
+    // 2. Individual Blog post
+    if (clean.startsWith('blog/')) {
+      const blogSlug = clean.replace('blog/', '');
+      const post = getBlogPostBySlug(blogSlug);
+      if (post) {
+        return <BlogPostPage post={post} onNavigate={handleNavigate} />;
+      }
+      return <NotFoundPage onNavigate={handleNavigate} />;
+    }
+
+    // 3. Static & Hub pages
+    switch (clean) {
+      case '':
+      case 'home':
+        return (
           <HomePage
             items={items}
             settings={globalSettings}
@@ -347,7 +528,7 @@ export default function App() {
             onUpdateItemSettings={handleUpdateItemSettings}
             onRecompressItem={handleRecompressItem}
             onRemoveItem={handleRemoveItem}
-            onPreviewItem={setModalItem}
+            onPreviewItem={(item) => setModalItem(item)}
             onApplySettingsToAll={handleApplySettingsToAll}
             onCompressAll={handleApplySettingsToAll}
             onDownloadAllZip={handleDownloadAllZip}
@@ -356,117 +537,91 @@ export default function App() {
             isCompressing={isCompressing}
             zipProgress={zipProgress}
           />
-        )}
+        );
 
-        {currentRoute === 'image-size-reducer' && (
-          <ImageSizeReducerPage
-            items={items}
-            settings={globalSettings}
-            onChangeSettings={setGlobalSettings}
-            onFilesSelected={handleFilesSelected}
-            onUpdateItemSettings={handleUpdateItemSettings}
-            onRecompressItem={handleRecompressItem}
-            onRemoveItem={handleRemoveItem}
-            onPreviewItem={setModalItem}
-            onApplySettingsToAll={handleApplySettingsToAll}
-            onCompressAll={handleApplySettingsToAll}
-            onDownloadAllZip={handleDownloadAllZip}
-            onClearAll={handleClearAll}
-            onNavigate={handleNavigate}
-            isCompressing={isCompressing}
-            zipProgress={zipProgress}
-          />
-        )}
+      case 'govt-jobs':
+        return <GovtJobsHubPage onNavigate={handleNavigate} />;
 
-        {currentRoute === 'jpg-compressor' && (
-          <JpgCompressorPage
-            items={items}
-            settings={globalSettings}
-            onChangeSettings={setGlobalSettings}
-            onFilesSelected={handleFilesSelected}
-            onUpdateItemSettings={handleUpdateItemSettings}
-            onRecompressItem={handleRecompressItem}
-            onRemoveItem={handleRemoveItem}
-            onPreviewItem={setModalItem}
-            onApplySettingsToAll={handleApplySettingsToAll}
-            onCompressAll={handleApplySettingsToAll}
-            onDownloadAllZip={handleDownloadAllZip}
-            onClearAll={handleClearAll}
-            onNavigate={handleNavigate}
-            isCompressing={isCompressing}
-            zipProgress={zipProgress}
-          />
-        )}
+      case 'passport-photo':
+        return <PassportPhotoHubPage onNavigate={handleNavigate} />;
 
-        {currentRoute === 'png-compressor' && (
-          <PngCompressorPage
-            items={items}
-            settings={globalSettings}
-            onChangeSettings={setGlobalSettings}
-            onFilesSelected={handleFilesSelected}
-            onUpdateItemSettings={handleUpdateItemSettings}
-            onRecompressItem={handleRecompressItem}
-            onRemoveItem={handleRemoveItem}
-            onPreviewItem={setModalItem}
-            onApplySettingsToAll={handleApplySettingsToAll}
-            onCompressAll={handleApplySettingsToAll}
-            onDownloadAllZip={handleDownloadAllZip}
-            onClearAll={handleClearAll}
-            onNavigate={handleNavigate}
-            isCompressing={isCompressing}
-            zipProgress={zipProgress}
-          />
-        )}
+      case 'resize-by-size':
+        return <ResizeBySizeHubPage onNavigate={handleNavigate} />;
 
-        {currentRoute === 'webp-compressor' && (
-          <WebpCompressorPage
-            items={items}
-            settings={globalSettings}
-            onChangeSettings={setGlobalSettings}
-            onFilesSelected={handleFilesSelected}
-            onUpdateItemSettings={handleUpdateItemSettings}
-            onRecompressItem={handleRecompressItem}
-            onRemoveItem={handleRemoveItem}
-            onPreviewItem={setModalItem}
-            onApplySettingsToAll={handleApplySettingsToAll}
-            onCompressAll={handleApplySettingsToAll}
-            onDownloadAllZip={handleDownloadAllZip}
-            onClearAll={handleClearAll}
-            onNavigate={handleNavigate}
-            isCompressing={isCompressing}
-            zipProgress={zipProgress}
-          />
-        )}
+      case 'social-media-sizes':
+        return <SocialMediaHubPage onNavigate={handleNavigate} />;
 
-        {currentRoute === 'privacy-policy' && (
-          <PrivacyPolicyPage onNavigate={handleNavigate} />
-        )}
+      case 'blog':
+        return <BlogHubPage onNavigate={handleNavigate} />;
 
-        {currentRoute === 'terms' && (
-          <TermsPage onNavigate={handleNavigate} />
-        )}
+      case 'about':
+        return <AboutPage />;
 
-        {currentRoute === 'contact' && (
-          <ContactPage onNavigate={handleNavigate} />
-        )}
+      case 'disclaimer':
+        return <DisclaimerPage />;
 
-        {currentRoute === 'pricing' && (
-          <PricingPage onNavigate={handleNavigate} />
-        )}
+      case 'privacy-policy':
+        return <PrivacyPolicyPage onNavigate={handleNavigate} />;
+
+      case 'terms':
+        return <TermsPage onNavigate={handleNavigate} />;
+
+      case 'contact':
+        return <ContactPage onNavigate={handleNavigate} />;
+
+      case 'support':
+        return <SupportPage onNavigate={handleNavigate} />;
+
+      case 'pricing':
+        return <PricingPage onNavigate={handleNavigate} />;
+
+      case 'image-size-reducer':
+        return <ImageSizeReducerPage onNavigate={handleNavigate} onFilesSelected={handleFilesSelected} />;
+
+      case 'jpg-compressor':
+        return <JpgCompressorPage onNavigate={handleNavigate} onFilesSelected={handleFilesSelected} />;
+
+      case 'png-compressor':
+        return <PngCompressorPage onNavigate={handleNavigate} onFilesSelected={handleFilesSelected} />;
+
+      case 'webp-compressor':
+        return <WebpCompressorPage onNavigate={handleNavigate} onFilesSelected={handleFilesSelected} />;
+
+      default:
+        return <NotFoundPage onNavigate={handleNavigate} />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors selection:bg-indigo-500 selection:text-white max-w-full overflow-x-clip">
+      
+      {/* Top Navbar */}
+      <Navbar
+        currentRoute={currentRoute}
+        onNavigate={handleNavigate}
+        isDark={isDark}
+        onToggleTheme={() => setIsDark(!isDark)}
+        queueCount={items.length}
+      />
+
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 min-w-0">
+        {renderCurrentPage()}
       </main>
 
-      {/* Footer */}
+      {/* Site Footer */}
       <Footer onNavigate={handleNavigate} />
 
-      {/* Before / After Inspection Modal */}
+      {/* Before/After Comparison Modal */}
       {modalItem && (
         <BeforeAfterModal
           item={modalItem}
+          isOpen={!!modalItem}
           onClose={() => setModalItem(null)}
         />
       )}
 
-      {/* Pro Subscription & Pricing Plans Modal */}
+      {/* Global Subscription Modal (hidden by default) */}
       <SubscriptionModal />
 
     </div>

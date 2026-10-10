@@ -93,14 +93,28 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({ onNavigate
         <section className="space-y-3">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">3. Information We Collect</h2>
           <p>
-            We do not collect any personal data, images, filenames, IP addresses, or tracking logs. Your files exist only for the duration of your browser session and vanish immediately when you close or reload the tab.
+            We do not collect any personal data, images, filenames, or biometric parameters. Your files exist only in your browser memory for the duration of your session and vanish immediately when you close or reload the tab.
           </p>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">4. Offline Availability</h2>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">4. Cookies & Local Storage</h2>
           <p>
-            Because all compression logic resides in static client JavaScript and HTML5 Canvas, the application continues to compress images even when your computer is completely disconnected from the internet.
+            We use browser LocalStorage strictly to store your interface preferences (such as your chosen light/dark theme and English/Hinglish language selection). These preferences remain solely on your device.
+          </p>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">5. Analytics & Third-Party Advertising</h2>
+          <p>
+            To understand high-level web traffic patterns and maintain this service free of charge, we may use standard privacy-respecting analytics (such as Google Analytics 4) and display contextual advertisements (such as Google AdSense). These third-party vendors may use cookies to serve non-personalized or personalized ads based on prior visits. You can manage or disable cookie preferences directly in your browser settings at any time.
+          </p>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">6. Offline Availability</h2>
+          <p>
+            Because all compression logic resides in static client JavaScript and HTML5 Canvas, the core image compression engine continues to work seamlessly even when your device is completely disconnected from the internet.
           </p>
         </section>
 

@@ -22,15 +22,18 @@ import {
 import { useI18n } from '../lib/i18n';
 import { useAuth } from '../context/AuthContext';
 import { useSubscription, FREE_TIER_LIMIT } from '../context/SubscriptionContext';
+import { ENABLE_ACCOUNTS } from '../config';
 
 interface DropzoneProps {
   onFilesSelected: (files: File[]) => void;
   isProcessing?: boolean;
+  acceptedFormats?: string;
 }
 
 export const Dropzone: React.FC<DropzoneProps> = ({
   onFilesSelected,
   isProcessing = false,
+  acceptedFormats,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -127,6 +130,12 @@ export const Dropzone: React.FC<DropzoneProps> = ({
 
     if (validFiles.length === 0) return;
 
+    // When accounts are disabled, allow unlimited processing without authentication
+    if (!ENABLE_ACCOUNTS) {
+      onFilesSelected(validFiles);
+      return;
+    }
+
     // Check if user is authenticated; if not, show the modal to sign in
     if (!user) {
       setPendingFiles(validFiles);
@@ -156,6 +165,10 @@ export const Dropzone: React.FC<DropzoneProps> = ({
 
   // Click on dropzone area / upload button
   const handleDropzoneClick = () => {
+    if (!ENABLE_ACCOUNTS) {
+      fileInputRef.current?.click();
+      return;
+    }
     if (!user) {
       setShowAuthModal(true);
       return;
@@ -343,7 +356,7 @@ export const Dropzone: React.FC<DropzoneProps> = ({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`group relative flex flex-col items-center justify-center p-8 sm:p-12 rounded-3xl border-2 border-dashed transition-all duration-200 cursor-pointer overflow-hidden ${
+        className={`group relative flex flex-col items-center justify-center p-5 sm:p-10 md:p-12 rounded-3xl border-2 border-dashed transition-all duration-200 cursor-pointer overflow-hidden max-w-full ${
           isDragOver
             ? 'border-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/40 scale-[1.01] shadow-xl shadow-indigo-500/10'
             : 'border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-900/70 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 shadow-sm'
@@ -352,8 +365,13 @@ export const Dropzone: React.FC<DropzoneProps> = ({
         {/* Subtle Decorative Background Mesh */}
         <div className="absolute inset-0 bg-gradient-to-tr from-indigo-50/20 via-transparent to-cyan-50/20 pointer-events-none dark:from-indigo-950/10 dark:to-cyan-950/10" />
 
-        {/* User Quota & Plan Status Banner */}
-        {user ? (
+        {/* Free & Unlimited In-Browser Banner */}
+        {!ENABLE_ACCOUNTS ? (
+          <div className="relative mb-5 inline-flex items-center justify-center flex-wrap text-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-[11px] sm:text-xs font-bold text-emerald-800 dark:text-emerald-300 shadow-2xs max-w-full">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span>100% Free &amp; Unlimited • No Login • Zero Server Uploads</span>
+          </div>
+        ) : user ? (
           isUnlimited ? (
             <div className="relative mb-5 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-emerald-500/10 border border-amber-300 dark:border-amber-700/60 text-xs font-bold text-amber-800 dark:text-amber-300">
               <Crown className="w-3.5 h-3.5 text-amber-500" />
@@ -438,7 +456,7 @@ export const Dropzone: React.FC<DropzoneProps> = ({
             <span>Zero server upload • 100% In-Browser</span>
           </span>
           <span className="hidden sm:inline">•</span>
-          <span>JPG, PNG, WebP, GIF, BMP, AVIF</span>
+          <span>{acceptedFormats || 'JPG, PNG, WebP, AVIF, HEIC'}</span>
         </div>
 
         {/* Drag Overlay visual indicator */}

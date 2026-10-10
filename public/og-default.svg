@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#1e1b4b" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="50%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+    <linearGradient id="flag" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff9933" />
+      <stop offset="50%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#138808" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)" />
+
+  <!-- Grid Pattern Overlay -->
+  <g opacity="0.06">
+    <path d="M0 70 H1200 M0 140 H1200 M0 210 H1200 M0 280 H1200 M0 350 H1200 M0 420 H1200 M0 490 H1200 M0 560 H1200" stroke="#ffffff" stroke-width="1" />
+    <path d="M100 0 V630 M200 0 V630 M300 0 V630 M400 0 V630 M500 0 V630 M600 0 V630 M700 0 V630 M800 0 V630 M900 0 V630 M1000 0 V630 M1100 0 V630" stroke="#ffffff" stroke-width="1" />
+  </g>
+
+  <!-- Glow circles -->
+  <circle cx="200" cy="180" r="220" fill="#6366f1" opacity="0.18" filter="blur(60px)" />
+  <circle cx="1020" cy="460" r="240" fill="#06b6d4" opacity="0.16" filter="blur(70px)" />
+
+  <!-- Badge Top -->
+  <g transform="translate(100, 85)">
+    <rect width="420" height="42" rx="21" fill="#1e293b" stroke="#334155" stroke-width="1" />
+    <circle cx="24" cy="21" r="7" fill="#10b981" />
+    <text x="42" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="700" fill="#e2e8f0" letter-spacing="0.5">100% FREE • IN-BROWSER &amp; PRIVATE</text>
+  </g>
+
+  <!-- Main Headline -->
+  <text x="100" y="200" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="64" font-weight="900" fill="#ffffff" letter-spacing="-1">
+    FreeImageResize<tspan fill="#818cf8">.online</tspan>
+  </text>
+
+  <!-- Tagline -->
+  <text x="100" y="260" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="34" font-weight="700" fill="url(#accent)">
+    Fast Image Resizer &amp; KB Compressor
+  </text>
+
+  <!-- Subheading / Target use-cases -->
+  <text x="100" y="325" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="500" fill="#cbd5e1">
+    Govt Exams (SSC, UPSC, IBPS) • Indian Passport &amp; Visa (35x45 mm)
+  </text>
+  <text x="100" y="360" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="500" fill="#94a3b8">
+    Exact KB Target (20KB, 50KB, 100KB) • No Login • Zero Uploads
+  </text>
+
+  <!-- Feature Pills -->
+  <g transform="translate(100, 420)">
+    <!-- Pill 1 -->
+    <rect x="0" y="0" width="220" height="60" rx="16" fill="#1e293b" stroke="#475569" stroke-width="1" />
+    <text x="24" y="36" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="17" font-weight="700" fill="#f8fafc">⚡ Exact 20KB / 50KB</text>
+
+    <!-- Pill 2 -->
+    <rect x="235" y="0" width="230" height="60" rx="16" fill="#1e293b" stroke="#475569" stroke-width="1" />
+    <text x="259" y="36" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="17" font-weight="700" fill="#f8fafc">🔒 100% Safe &amp; Offline</text>
+
+    <!-- Pill 3 -->
+    <rect x="480" y="0" width="240" height="60" rx="16" fill="#1e293b" stroke="#475569" stroke-width="1" />
+    <text x="504" y="36" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="17" font-weight="700" fill="#f8fafc">🇮🇳 Govt Exam Ready</text>
+
+    <!-- Pill 4 -->
+    <rect x="735" y="0" width="230" height="60" rx="16" fill="#1e293b" stroke="#475569" stroke-width="1" />
+    <text x="759" y="36" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="17" font-weight="700" fill="#f8fafc">✨ Batch ZIP Download</text>
+  </g>
+
+  <!-- Bottom Bar -->
+  <rect x="0" y="622" width="1200" height="8" fill="url(#accent)" />
+</svg>

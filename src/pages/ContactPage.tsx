@@ -156,6 +156,22 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => {
           </div>
 
           <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <Mail className="w-4 h-4 text-indigo-500" />
+              Direct Email
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Prefer writing an email? Reach us directly at:
+            </p>
+            <a
+              href="mailto:support@freeimageresize.online"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline break-all"
+            >
+              support@freeimageresize.online
+            </a>
+          </div>
+
+          <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
             <h3 className="font-bold text-sm text-slate-900 dark:text-white">Quick Answers</h3>
             <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
               <li>• Are my photos stored? No, zero server uploads.</li>

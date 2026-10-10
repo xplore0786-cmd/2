@@ -58,31 +58,54 @@ npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 3. Production Build
+### 3. Production Build & Static Prerender
 ```bash
 npm run build
 ```
+This runs `vite build` followed by `tsx scripts/prerender.ts`, automatically outputting:
+- Static HTML files for every route in `dist/<route>/index.html` (with full crawlable content, meta tags, and JSON-LD).
+- Up-to-date `dist/sitemap.xml` containing only verified and indexable routes.
+- `dist/robots.txt`.
 
 ---
 
 ## Deployment Instructions
 
-### Deploy to Cloud Run / Container
-The application builds static assets to `dist/` ready to be served by any static host (Cloud Run, Vercel, Netlify, Cloudflare Pages, Nginx, or GitHub Pages).
+### 1. Deploying on Cloudflare Pages (Recommended)
+1. Push your repository to GitHub or GitLab.
+2. In Cloudflare Dashboard, go to **Workers & Pages** > **Create application** > **Pages** > **Connect to Git**.
+3. Select your repository.
+4. Set the Build Settings:
+   - **Framework preset**: `Vite`
+   - **Build command**: `npm run build`
+   - **Build output directory**: `dist`
+5. Click **Save and Deploy**.
+6. **Connecting Custom Domain (`www.freeimageresize.online`)**:
+   - In your Cloudflare Pages project, go to **Custom domains** tab > **Set up a domain**.
+   - Enter `www.freeimageresize.online` (and optionally `freeimageresize.online`).
+   - If using Cloudflare DNS, DNS CNAME records are added automatically. If using an external registrar, create a CNAME record pointing `www` to your `<project>.pages.dev` domain.
 
-```dockerfile
-FROM node:20-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
+### 2. Deploying on Vercel
+1. Import your GitHub repository in the Vercel Dashboard.
+2. Build Settings:
+   - **Framework Preset**: `Vite`
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+3. Click **Deploy**.
+4. **Connecting Custom Domain**:
+   - Go to **Project Settings** > **Domains**.
+   - Add `www.freeimageresize.online`.
+   - Configure your DNS provider with the CNAME record `cname.vercel-dns.com` for `www` and `76.76.21.21` A-record for root apex.
 
-FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
+### 3. Deploying on Netlify
+1. Import your repository in the Netlify Dashboard.
+2. Build Settings:
+   - **Build command**: `npm run build`
+   - **Publish directory**: `dist`
+3. Click **Deploy Site**.
+4. **Connecting Custom Domain**:
+   - Go to **Domain management** > **Add a domain**.
+   - Enter `www.freeimageresize.online` and follow the DNS verification instructions.
 
 ---
 

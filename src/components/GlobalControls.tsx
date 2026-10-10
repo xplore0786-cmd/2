@@ -77,7 +77,7 @@ export const GlobalControls: React.FC<GlobalControlsProps> = ({
   };
 
   return (
-    <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm transition-all space-y-6">
+    <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 sm:p-6 md:p-8 shadow-sm transition-all space-y-6 max-w-full overflow-hidden">
       
       {/* Header & Quick Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100 dark:border-slate-800">
@@ -98,7 +98,7 @@ export const GlobalControls: React.FC<GlobalControlsProps> = ({
             id="btn-compress-all"
             disabled={isCompressing || totalImages === 0}
             onClick={onCompressAll}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:opacity-50 disabled:pointer-events-none text-white text-xs sm:text-sm font-semibold shadow-md shadow-indigo-600/20 transition-all"
+            className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:opacity-50 disabled:pointer-events-none text-white text-xs sm:text-sm font-semibold shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
           >
             <Zap className="w-4 h-4" />
             <span>{isCompressing ? t('compressingStatus') : t('recompressAll')}</span>
@@ -109,7 +109,7 @@ export const GlobalControls: React.FC<GlobalControlsProps> = ({
             id="btn-download-zip"
             disabled={completedImages === 0}
             onClick={onDownloadZip}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 disabled:pointer-events-none text-white text-xs sm:text-sm font-semibold shadow-md shadow-emerald-600/20 transition-all"
+            className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 disabled:pointer-events-none text-white text-xs sm:text-sm font-semibold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
           >
             <Download className="w-4 h-4" />
             <span>
@@ -124,7 +124,7 @@ export const GlobalControls: React.FC<GlobalControlsProps> = ({
             id="btn-clear-all"
             disabled={totalImages === 0}
             onClick={onClearAll}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 text-slate-600 dark:text-slate-300 text-xs sm:text-sm font-medium transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 text-slate-600 dark:text-slate-300 text-xs sm:text-sm font-medium transition-colors cursor-pointer"
             title={t('clearAll')}
           >
             <Trash2 className="w-4 h-4" />
@@ -137,7 +137,7 @@ export const GlobalControls: React.FC<GlobalControlsProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Col 1: Compression Preset & Target Size */}
-        <div className="space-y-3">
+        <div className="space-y-3 min-w-0">
           <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between">
             <span>{t('compressionMode')}</span>
             <span className="text-indigo-600 dark:text-indigo-400 font-semibold lowercase capitalize">
@@ -151,7 +151,7 @@ export const GlobalControls: React.FC<GlobalControlsProps> = ({
           </label>
 
           {/* Preset Buttons */}
-          <div className="grid grid-cols-4 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/60">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/60">
             {(['low', 'medium', 'high', 'target'] as CompressionPreset[]).map((preset) => {
               const label = preset === 'low' ? t('presetLow') 
                 : preset === 'medium' ? t('presetMedium') 
@@ -163,7 +163,7 @@ export const GlobalControls: React.FC<GlobalControlsProps> = ({
                   type="button"
                   id={`preset-btn-${preset}`}
                   onClick={() => handlePresetSelect(preset)}
-                  className={`py-2 px-1 text-xs font-semibold rounded-lg capitalize transition-all ${
+                  className={`py-2 px-1 text-xs font-semibold rounded-lg capitalize transition-all cursor-pointer ${
                     settings.preset === preset
                       ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-sm border border-slate-200 dark:border-slate-600'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -221,12 +221,12 @@ export const GlobalControls: React.FC<GlobalControlsProps> = ({
 
               {/* Quick Pills */}
               <div className="flex flex-wrap gap-1.5">
-                {[50, 100, 200, 500, 1024, 2048].map((kb) => (
+                {[20, 50, 100, 200, 500, 1024].map((kb) => (
                   <button
                     key={kb}
                     type="button"
                     onClick={() => handleTargetSizeSelect(kb)}
-                    className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all ${
+                    className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
                       settings.targetSizeKB === kb
                         ? 'bg-indigo-50 dark:bg-indigo-950/80 border-indigo-500 text-indigo-700 dark:text-indigo-300 font-semibold'
                         : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300'
