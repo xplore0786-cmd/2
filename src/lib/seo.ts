@@ -28,7 +28,7 @@ export function updatePageMeta({
   description,
   path,
   ogType = 'website',
-  ogImage = `${SITE_URL}/og-default.png`,
+  ogImage = '/og-default.png',
   noindex = false,
   breadcrumbs,
   faqs,
@@ -140,19 +140,21 @@ export function updatePageMeta({
     });
   }
 
-  // Breadcrumbs schema
-  if (breadcrumbs && breadcrumbs.length > 0) {
-    jsonLdGraph.push({
-      '@type': 'BreadcrumbList',
-      '@id': `${canonicalUrl}#breadcrumb`,
-      'itemListElement': breadcrumbs.map((crumb, index) => ({
-        '@type': 'ListItem',
-        'position': index + 1,
-        'name': crumb.name,
-        'item': crumb.url.startsWith('http') ? crumb.url : `${SITE_URL}${crumb.url.startsWith('/') ? crumb.url : `/${crumb.url}`}`
-      }))
-    });
-  }
+  // Breadcrumbs schema (BreadcrumbList everywhere)
+  const effectiveCrumbs = (breadcrumbs && breadcrumbs.length > 0)
+    ? breadcrumbs
+    : [{ name: 'Home', url: '/' }];
+
+  jsonLdGraph.push({
+    '@type': 'BreadcrumbList',
+    '@id': `${canonicalUrl}#breadcrumb`,
+    'itemListElement': effectiveCrumbs.map((crumb, index) => ({
+      '@type': 'ListItem',
+      'position': index + 1,
+      'name': crumb.name,
+      'item': crumb.url.startsWith('http') ? crumb.url : `${SITE_URL}${crumb.url.startsWith('/') ? crumb.url : `/${crumb.url}`}`
+    }))
+  });
 
   // FAQ schema
   if (faqs && faqs.length > 0) {

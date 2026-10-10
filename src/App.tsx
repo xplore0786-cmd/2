@@ -158,8 +158,8 @@ export default function App() {
       case '':
       case 'home':
         updatePageMeta({
-          title: `Free Image Size Reducer Online – Compress Photos to Exact KB & Dimensions`,
-          description: '100% free in-browser image compressor and photo resizer. Reduce JPG, PNG, and WebP to exact 20KB, 50KB, 100KB, or passport 35x45mm with zero server upload.',
+          title: 'Resize Image to KB, Photo & Signature Resize for Govt Job Forms & Passports – FreeImageResize.online',
+          description: 'Free online image resizer to reduce image to KB, crop and resize photos and signatures for govt job forms (SSC, UPSC, IBPS, Railways) and passport photos in your browser.',
           path: '',
         });
         break;
@@ -167,7 +167,7 @@ export default function App() {
       case 'govt-jobs':
         updatePageMeta({
           title: `Govt Job Photo & Signature Resizers (SSC, UPSC, IBPS, Railways) – ${SITE_NAME}`,
-          description: 'Resize photographs (20KB - 50KB) and signatures (10KB - 20KB) for SSC, UPSC, Bank PO/Clerk, Railway RRB, and Police recruitment forms online.',
+          description: 'Resize photo and signature for SSC, UPSC, Bank PO/Clerk, Railway RRB, and Police recruitment forms online. Free and client-side private.',
           path: 'govt-jobs',
           breadcrumbs: [
             { name: 'Home', url: '/' },
