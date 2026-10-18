@@ -423,7 +423,7 @@ function renderArticleContentHtml(content: string, relatedTools?: { label: strin
     </div>
   `);
 
-  return htmlParts.join('\\n');
+  return htmlParts.join('\n');
 }
 
 // Function to generate static HTML document for a route
@@ -787,9 +787,12 @@ function prerenderRoute(templateHtml: string, routeInfo: RouteInfo): string {
     html = html.replace('<head>', `<head>\n    <meta name="author" content="FreeImageResize.online" />`);
   }
 
-  // Ensure Google AdSense meta tag
+  // Ensure Google AdSense meta tag and Auto Ads script
   if (!html.includes('google-adsense-account')) {
     html = html.replace('<head>', `<head>\n    <meta name="google-adsense-account" content="ca-pub-6416068626330587">`);
+  }
+  if (!html.includes('pagead2.googlesyndication.com')) {
+    html = html.replace('<head>', `<head>\n    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6416068626330587" crossorigin="anonymous"></script>`);
   }
 
   // Replace <title>

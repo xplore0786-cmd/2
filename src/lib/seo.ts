@@ -74,6 +74,15 @@ export function updatePageMeta({
   setMetaTag('name', 'author', SITE_NAME);
   setMetaTag('name', 'google-adsense-account', 'ca-pub-6416068626330587');
 
+  // Ensure Google AdSense Auto Ads Script in head
+  if (!document.querySelector('script[src*="pagead2.googlesyndication.com"]')) {
+    const adsScript = document.createElement('script');
+    adsScript.async = true;
+    adsScript.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6416068626330587';
+    adsScript.crossOrigin = 'anonymous';
+    document.head.appendChild(adsScript);
+  }
+
   // 4. Robots
   if (noindex) {
     setMetaTag('name', 'robots', 'noindex, follow');
