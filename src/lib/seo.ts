@@ -72,6 +72,7 @@ export function updatePageMeta({
   // 3. Standard Meta
   setMetaTag('name', 'description', description);
   setMetaTag('name', 'author', SITE_NAME);
+  setMetaTag('name', 'google-adsense-account', 'ca-pub-6416068626330587');
 
   // 4. Robots
   if (noindex) {

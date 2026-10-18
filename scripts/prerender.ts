@@ -27,6 +27,10 @@ interface RouteInfo {
   itemsSummary?: string;
   hubCategory?: 'govt-jobs' | 'passport-id' | 'resize-by-size' | 'social';
   isBlogHub?: boolean;
+  articleContent?: string;
+  author?: string;
+  readTime?: string;
+  relatedTools?: { label: string; url: string }[];
 }
 
 // 1. Gather all routes
@@ -284,6 +288,10 @@ for (const post of BLOG_POSTS) {
     h1: post.h1,
     description: post.metaDescription,
     intro: post.excerpt,
+    articleContent: post.content,
+    author: post.author,
+    readTime: post.readTime,
+    relatedTools: post.relatedTools,
     verified: true,
     isArticle: true,
     publishedDate: post.publishedDate,
@@ -316,6 +324,106 @@ function renderPresetCard(preset: Preset): string {
       </div>
     </a>
   `;
+}
+
+// Helper to render markdown blog article content to clean semantic HTML
+function renderArticleContentHtml(content: string, relatedTools?: { label: string; url: string }[]): string {
+  const lines = content.trim().split('\n');
+  const htmlParts: string[] = [];
+
+  let inTable = false;
+  let tableRows: string[][] = [];
+
+  const flushTable = () => {
+    if (tableRows.length > 0) {
+      const headerRow = tableRows[0];
+      const bodyRows = tableRows.slice(1);
+      htmlParts.push(`
+        <div style="margin:24px 0;overflow-x:auto;border-radius:12px;border:1px solid #e2e8f0;">
+          <table style="width:100%;border-collapse:collapse;font-size:14px;text-align:left;">
+            <thead style="background:#f8fafc;font-weight:700;color:#0f172a;">
+              <tr>
+                ${headerRow.map(c => `<th style="padding:10px 14px;border-bottom:1px solid #e2e8f0;">${formatInlineHtml(c.replace(/\*\*/g, '').trim())}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${bodyRows.map(r => `
+                <tr style="border-bottom:1px solid #f1f5f9;">
+                  ${r.map(c => `<td style="padding:10px 14px;color:#475569;">${formatInlineHtml(c.trim())}</td>`).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `);
+      tableRows = [];
+      inTable = false;
+    }
+  };
+
+  const formatInlineHtml = (text: string): string => {
+    let out = text;
+    // Replace [label](/url) with <a href="/url">label</a>
+    out = out.replace(/\[(.*?)\]\((\/.*?)\)/g, '<a href="$2" style="color:#4f46e5;font-weight:600;text-decoration:underline;">$1</a>');
+    // Replace **bold** with <strong>
+    out = out.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Replace *italic* with <em>
+    out = out.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    // Replace `code` with <code>
+    out = out.replace(/`(.*?)`/g, '<code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:13px;color:#4f46e5;font-family:monospace;">$1</code>');
+    return out;
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+      inTable = true;
+      if (line.includes('---')) continue;
+      const cells = line.split('|').slice(1, -1).map(c => c.trim());
+      tableRows.push(cells);
+      continue;
+    } else if (inTable) {
+      flushTable();
+    }
+
+    if (line.startsWith('### ')) {
+      htmlParts.push(`<h2 style="font-size:22px;font-weight:800;color:#0f172a;margin-top:32px;margin-bottom:12px;">${formatInlineHtml(line.replace('### ', ''))}</h2>`);
+    } else if (line.startsWith('#### ')) {
+      htmlParts.push(`<h3 style="font-size:18px;font-weight:700;color:#0f172a;margin-top:24px;margin-bottom:8px;">${formatInlineHtml(line.replace('#### ', ''))}</h3>`);
+    } else if (line.startsWith('---')) {
+      htmlParts.push(`<hr style="margin:28px 0;border:none;border-top:1px solid #e2e8f0;" />`);
+    } else if (/^\d+\.\s/.test(line)) {
+      htmlParts.push(`<div style="display:flex;align-items:flex-start;gap:8px;margin:8px 0;font-size:15px;color:#334155;"><span style="font-weight:700;color:#4f46e5;">${line.match(/^\d+\./)![0]}</span><div>${formatInlineHtml(line.replace(/^\d+\.\s*/, ''))}</div></div>`);
+    } else if (line.startsWith('- ')) {
+      htmlParts.push(`<div style="display:flex;align-items:flex-start;gap:8px;margin:6px 0 6px 12px;font-size:15px;color:#334155;"><span style="color:#6366f1;">•</span><div>${formatInlineHtml(line.replace('- ', ''))}</div></div>`);
+    } else if (line.trim().length > 0) {
+      htmlParts.push(`<p style="font-size:15px;color:#334155;line-height:1.7;margin:14px 0;">${formatInlineHtml(line)}</p>`);
+    }
+  }
+
+  if (inTable) flushTable();
+
+  // Add related tools section
+  if (relatedTools && relatedTools.length > 0) {
+    htmlParts.push(`
+      <div style="margin:36px 0;padding:24px 28px;border-radius:20px;background:#eef2ff;border:1px solid #c7d2fe;">
+        <h3 style="font-size:16px;font-weight:800;color:#1e1b4b;margin-top:0;margin-bottom:14px;">Direct Tool Links Mentioned in This Guide:</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;">
+          ${relatedTools.map(t => `<a href="${t.url}" style="display:inline-flex;align-items:center;padding:10px 16px;background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;text-decoration:none;color:#4f46e5;font-size:13px;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,0.05);">${t.label} →</a>`).join('')}
+        </div>
+      </div>
+    `);
+  }
+
+  // Back to All Guides button
+  htmlParts.push(`
+    <div style="margin-top:32px;padding-top:20px;border-top:1px solid #e2e8f0;">
+      <a href="/blog" style="display:inline-flex;align-items:center;gap:6px;padding:10px 18px;background:#f1f5f9;border-radius:12px;text-decoration:none;color:#334155;font-size:13px;font-weight:700;">← Back to All Guides</a>
+    </div>
+  `);
+
+  return htmlParts.join('\\n');
 }
 
 // Function to generate static HTML document for a route
@@ -622,6 +730,20 @@ function prerenderRoute(templateHtml: string, routeInfo: RouteInfo): string {
     }
   }
 
+  // Individual Blog Article specifics
+  if (routeInfo.isArticle && routeInfo.articleContent) {
+    noscriptContent += `
+      <article style="background:#ffffff;border:1px solid #e2e8f0;padding:32px 36px;border-radius:24px;margin-bottom:32px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+        <div style="font-size:13px;color:#64748b;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid #e2e8f0;display:flex;gap:16px;flex-wrap:wrap;">
+          <span>👤 ${routeInfo.author || 'Editorial Team'}</span>
+          <span>📅 ${routeInfo.publishedDate}</span>
+          <span>⏱️ ${routeInfo.readTime}</span>
+        </div>
+        ${renderArticleContentHtml(routeInfo.articleContent, routeInfo.relatedTools)}
+      </article>
+    `;
+  }
+
   // FAQs Section
   if (routeInfo.faqs && routeInfo.faqs.length > 0) {
     noscriptContent += `
@@ -663,6 +785,11 @@ function prerenderRoute(templateHtml: string, routeInfo: RouteInfo): string {
     html = html.replace(/<meta name="author"[^>]*>/i, `<meta name="author" content="FreeImageResize.online" />`);
   } else {
     html = html.replace('<head>', `<head>\n    <meta name="author" content="FreeImageResize.online" />`);
+  }
+
+  // Ensure Google AdSense meta tag
+  if (!html.includes('google-adsense-account')) {
+    html = html.replace('<head>', `<head>\n    <meta name="google-adsense-account" content="ca-pub-6416068626330587">`);
   }
 
   // Replace <title>
